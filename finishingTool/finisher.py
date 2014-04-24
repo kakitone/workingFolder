@@ -5,8 +5,8 @@ from collections import deque
 from operator import itemgetter
 import sys
 import time
-###
 
+# This is a test
 ##### House keeping files
 def writeToFile_Double1(folderName, fileName1, fileName2, option = "contig"):
 
