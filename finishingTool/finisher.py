@@ -173,166 +173,165 @@ def formRelatedReadsFile(folderName,mummerLink):
 
     ### Extract heads of the contigs
     print ">formRelatedReadsFile"
-    
-    f = open(folderName + "improved.fasta", 'r')
-    f2 = open(folderName + "improvedTrunc.fasta", 'w')
-    temp = f.readline()
-    tempContig = ""
-    thres = 400
-    runningIndex = 0
-    endThres = 10 
-    
-    while len(temp) > 0:
-        if temp[-1] == '\n':
-            temp = temp[0:-1]
-        
-        
-        if temp[0] == '>':
-
-            if len(tempContig) > 0:
-                writeToFile(f2, runningIndex,tempContig[0:thres])
-                runningIndex = runningIndex +1
-                
-                writeToFile(f2, runningIndex,tempContig[-thres:])
-                runningIndex = runningIndex +1 
-                
-                                
-                writeToFile(f2, runningIndex,reverseComplement(tempContig[0:thres]))
-                runningIndex = runningIndex +1
-                
-                writeToFile(f2, runningIndex,reverseComplement(tempContig[-thres:]))
-                runningIndex = runningIndex +1
-                
-                tempContig = ""
-        else:
-            tempContig = tempContig + temp
-        
+    if False:
+        f = open(folderName + "improved.fasta", 'r')
+        f2 = open(folderName + "improvedTrunc.fasta", 'w')
         temp = f.readline()
-
-    writeToFile(f2, runningIndex,tempContig[0:thres])
-    runningIndex = runningIndex +1
-    
-    writeToFile(f2, runningIndex,tempContig[-thres:])
-    runningIndex = runningIndex +1
-                  
-    writeToFile(f2, runningIndex,reverseComplement(tempContig[0:thres]))
-    runningIndex = runningIndex +1
-    
-    writeToFile(f2, runningIndex,reverseComplement(tempContig[-thres:]))
-    runningIndex = runningIndex +1
-    
-    
-    f2.close()
-    f.close()
-    
-    ### Write double stranded reads
-    writeToFile_Double1(folderName, "improved.fasta", "improved_Double.fasta", "contig")
-
-    #writeToFile_Double1(folderName, "raw_reads.fasta", "raw_reads_Double.fasta","read")
-    
-    ### Apply MUMMER on them using cleanedReads against them
-    assoiatedReadIndex = []
-    nameList = []
-    numberOfFiles = 20
-    command = "./fasta-splitter.pl --n-parts "+str(numberOfFiles)+" "+ folderName+"raw_reads.fasta"
-    os.system(command)
-
-    
-    for dummyI in range(1, numberOfFiles+1):
-        indexOfMum = ""
-        if dummyI < 10:
-            indexOfMum = "0"+str(dummyI)
-        else:
-            indexOfMum = str(dummyI)
+        tempContig = ""
+        thres = 400
+        runningIndex = 0
+        endThres = 10 
         
-        command =mummerLink +"nucmer --maxmatch --nosimplify -p "+folderName+"out "+ folderName+ "improvedTrunc.fasta raw_reads.part-"+indexOfMum+".fasta"
-        os.system(command)
-        
-
-        command  = mummerLink +"show-coords -r "+folderName+"out.delta > "+folderName+"fromMum"+indexOfMum
-        os.system(command)
-        
-        f = open(folderName + "fromMum"+indexOfMum, 'r')
-
-        for i in range(6):
-            tmp = f.readline()
-        
-        while len(tmp) > 0:
-            infoArr = tmp.split('|')
-            myArr = infoArr[-1].split('\t')
-            rdGpArr = infoArr[-1].split('\t')
-            contigName = rdGpArr[0].rstrip().lstrip()
-            readName = rdGpArr[1].rstrip().lstrip()
-                
+        while len(temp) > 0:
+            if temp[-1] == '\n':
+                temp = temp[0:-1]
             
             
-            endSegArr = infoArr[0].split(" ")
-            pos = []
-            for eachitem in endSegArr:
-                if len(eachitem) > 0:
-                    pos.append(int(eachitem))
+            if temp[0] == '>':
+    
+                if len(tempContig) > 0:
+                    writeToFile(f2, runningIndex,tempContig[0:thres])
+                    runningIndex = runningIndex +1
                     
-            startPos = pos[0]
-            endPos = pos[1]
-            if startPos < endThres and endPos > thres-endThres:
-                assoiatedReadIndex.append(myArr[1])
-                nameList.append([int(contigName.split('_')[1]), readName])
-            tmp  = f.readline()
+                    writeToFile(f2, runningIndex,tempContig[-thres:])
+                    runningIndex = runningIndex +1 
+                    
+                                    
+                    writeToFile(f2, runningIndex,reverseComplement(tempContig[0:thres]))
+                    runningIndex = runningIndex +1
+                    
+                    writeToFile(f2, runningIndex,reverseComplement(tempContig[-thres:]))
+                    runningIndex = runningIndex +1
+                    
+                    tempContig = ""
+            else:
+                tempContig = tempContig + temp
+            
+            temp = f.readline()
+    
+        writeToFile(f2, runningIndex,tempContig[0:thres])
+        runningIndex = runningIndex +1
         
+        writeToFile(f2, runningIndex,tempContig[-thres:])
+        runningIndex = runningIndex +1
+                      
+        writeToFile(f2, runningIndex,reverseComplement(tempContig[0:thres]))
+        runningIndex = runningIndex +1
+        
+        writeToFile(f2, runningIndex,reverseComplement(tempContig[-thres:]))
+        runningIndex = runningIndex +1
+        
+        
+        f2.close()
+        f.close()
+        
+        ### Write double stranded reads
+        writeToFile_Double1(folderName, "improved.fasta", "improved_Double.fasta", "contig")
+    
+        #writeToFile_Double1(folderName, "raw_reads.fasta", "raw_reads_Double.fasta","read")
+        
+        ### Apply MUMMER on them using cleanedReads against them
+        assoiatedReadIndex = []
+        nameList = []
+        numberOfFiles = 20
+        command = "./fasta-splitter.pl --n-parts "+str(numberOfFiles)+" "+ folderName+"raw_reads.fasta"
+        os.system(command)
+    
+        
+        for dummyI in range(1, numberOfFiles+1):
+            indexOfMum = ""
+            if dummyI < 10:
+                indexOfMum = "0"+str(dummyI)
+            else:
+                indexOfMum = str(dummyI)
+            
+            command =mummerLink +"nucmer --maxmatch --nosimplify -p "+folderName+"out "+ folderName+ "improvedTrunc.fasta raw_reads.part-"+indexOfMum+".fasta"
+            os.system(command)
+            
+    
+            command  = mummerLink +"show-coords -r "+folderName+"out.delta > "+folderName+"fromMum"+indexOfMum
+            os.system(command)
+            
+            f = open(folderName + "fromMum"+indexOfMum, 'r')
+    
+            for i in range(6):
+                tmp = f.readline()
+            
+            while len(tmp) > 0:
+                infoArr = tmp.split('|')
+                myArr = infoArr[-1].split('\t')
+                rdGpArr = infoArr[-1].split('\t')
+                contigName = rdGpArr[0].rstrip().lstrip()
+                readName = rdGpArr[1].rstrip().lstrip()
+                
+                endSegArr = infoArr[0].split(" ")
+                pos = []
+                for eachitem in endSegArr:
+                    if len(eachitem) > 0:
+                        pos.append(int(eachitem))
+                        
+                startPos = pos[0]
+                endPos = pos[1]
+                if startPos < endThres and endPos > thres-endThres:
+                    assoiatedReadIndex.append(myArr[1])
+                    nameList.append([int(contigName.split('_')[1]), readName])
+                tmp  = f.readline()
+            
+            f.close()
+        
+        
+        nameList.sort()
+    
+        assoiatedReadIndex.sort()
+        
+        print "assoiatedReadIndex", assoiatedReadIndex
+        
+        ckIndex = 0
+        f = open(folderName+"associatedNames.txt", 'w')
+        oneItem = 0
+        keyFound = []
+        for key, items in groupby(assoiatedReadIndex):
+            
+            countItem = 0
+            for eachitem in items:
+                countItem += 1
+                
+            if countItem == 1:
+                
+                oneItem += 1
+            else:
+                key = key.rstrip()
+                if not key in keyFound:
+                    f.write(key+'\n')
+                    keyFound.append(key)
+    
+            ckIndex += 1
+        
+        print "ckIndex,oneItem: ",ckIndex, oneItem
         f.close()
     
-    
-    nameList.sort()
-
-    assoiatedReadIndex.sort()
-    
-    print "assoiatedReadIndex", assoiatedReadIndex
-    
-    ckIndex = 0
-    f = open(folderName+"associatedNames.txt", 'w')
-    oneItem = 0
-    keyFound = []
-    for key, items in groupby(assoiatedReadIndex):
+        fFilter = open(folderName+"associatedNames.txt", 'r')
         
-        countItem = 0
-        for eachitem in items:
-            countItem += 1
-            
-        if countItem == 1:
-            
-            oneItem += 1
-        else:
-            key = key.rstrip()
-            if not key in keyFound:
-                f.write(key+'\n')
-                keyFound.append(key)
-
-        ckIndex += 1
-    
-    print "ckIndex,oneItem: ",ckIndex, oneItem
-    f.close()
-
-    fFilter = open(folderName+"associatedNames.txt", 'r')
-    
-    
-    
-    fout = open(folderName+"associatedNames2.txt",'w') 
-    maxCount = 5000
-    mytmpDum = fFilter.readline() 
-    while i < maxCount and len(mytmpDum)> 0:
-        fout.write(mytmpDum)  
+        
+        
+        fout = open(folderName+"associatedNames2.txt",'w') 
+        maxCount = 50000
         mytmpDum = fFilter.readline() 
-        
-    fout.close()   
-    fFilter.close()
+        while i < maxCount and len(mytmpDum)> 0:
+            fout.write(mytmpDum)  
+            mytmpDum = fFilter.readline() 
+            
+        fout.close()   
+        fFilter.close()
 
-    # use all the reads to improve performance
-    
     command = "perl -ne 'if(/^>(\S+)/){$c=$i{$1}}$c?print:chomp;$i{$_}=1 if @ARGV' "+folderName+"associatedNames2.txt "+folderName+"raw_reads.fasta > "+folderName+"relatedReads.fasta"
     os.system(command)
     
     writeToFile_Double1(folderName, "relatedReads.fasta", "relatedReads_Double.fasta","read")
-
+    
+    numberOfFiles = 20
+    command = "./fasta-splitter.pl --n-parts "+str(numberOfFiles)+" "+ folderName+"relatedReads_Double.fasta"
+    os.system(command)
     
     
     
@@ -374,10 +373,12 @@ def extractEdgeSet(folderName, mummerLink):
 
     tmp = fmyFile.readline().rstrip()
     maxSize = 50000
-    dummy = ""
+    
+    dummySeq = ""
     for i in range(maxSize):
-        dummy = dummy + "A"
-
+        dummySeq = dummySeq + "A"
+        
+    
     myName = ""
     while len(tmp) > 0:
         if tmp[0] == '>':
@@ -388,14 +389,14 @@ def extractEdgeSet(folderName, mummerLink):
             countComp = len(component)
             fSmaller.write(component)
             
-            fSmaller.write(dummy)
-            countComp = countComp + len(dummy)
+            fSmaller.write(dummySeq)
+            countComp = countComp + len(dummySeq)
             
             component =tmp[max(0, len(tmp)-maxSize):len(tmp)]
             fSmaller.write(component)
             countComp = countComp + len(component)
             
-            lengthDic[myName] = countComp
+            lengthDic[myName] = countComp 
             print "DebugName", myName, countComp
             fSmaller.write('\n')
 
@@ -403,48 +404,59 @@ def extractEdgeSet(folderName, mummerLink):
 
     fSmaller.close()
     fmyFile.close()
-
-    command =mummerLink +"nucmer --maxmatch --simplify -p "+folderName+"outRefine "+ folderName+ "smaller_improvedContig.fasta "+ folderName+ "relatedReads_Double.fasta"
-    os.system(command)
     
-    command  = mummerLink +"show-coords -r "+folderName+"outRefine.delta > "+folderName+"fromMumRefine"
-    os.system(command)
-    
-    f = open(folderName + "fromMumRefine", 'r')
-    for i in range(6):
-        tmp = f.readline()
-
-    while len(tmp) > 0:
-        info = tmp.split('|')
-        filterArr =  info[1].split()
-        rdGpArr = info[-1].split('\t')
-        firstArr = info[0].split()
-        matchLenArr = info[2].split()
-       
-    
-        matchLen = int(matchLenArr[0])    
-        contigStart, contigEnd =  int( firstArr[0]), int( firstArr[1])
-        readStart, readEnd =  int(filterArr[0]) , int(filterArr[1])
-        
-        contigName = rdGpArr[0].rstrip().lstrip()
-        readName = rdGpArr[1].rstrip().lstrip()
-            
-    
-        if readStart < readEnd and matchLen> K and min(contigStart,readStart)  < thres and min(lengthDic[contigName]- contigEnd,  lengthDic[readName] - readEnd) < thres:
-            conditionForMatch = True
+    numberOfFiles = 20
+    for dummyI in range(1, numberOfFiles+1):
+        indexOfMum = ""
+        if dummyI < 10:
+            indexOfMum = "0"+str(dummyI)
         else:
-            conditionForMatch = False
+            indexOfMum = str(dummyI)
 
-        if conditionForMatch :
-            if contigStart < thres:
-                dataSet.append((readName, contigName, 'L',matchLen))
+
+        command =mummerLink +"nucmer --maxmatch --simplify -p "+folderName+"outRefine "+ folderName+ "smaller_improvedContig.fasta "+ "relatedReads_Double.part-"+indexOfMum+".fasta"
+        os.system(command)
+        
+        command  = mummerLink +"show-coords -r "+folderName+"outRefine.delta > "+folderName+"fromMumRefine"+indexOfMum
+        os.system(command)
+        
+        f = open(folderName + "fromMumRefine"+indexOfMum, 'r')
+        for i in range(6):
+            tmp = f.readline()
+    
+        while len(tmp) > 0:
+            info = tmp.split('|')
+            filterArr =  info[1].split()
+            rdGpArr = info[-1].split('\t')
+            firstArr = info[0].split()
+            matchLenArr = info[2].split()
+           
+        
+            matchLen = int(matchLenArr[0])    
+            contigStart, contigEnd =  int( firstArr[0]), int( firstArr[1])
+            readStart, readEnd =  int(filterArr[0]) , int(filterArr[1])
             
-            if lengthDic[contigName]- contigEnd < thres :
-                dataSet.append((readName, contigName, 'R',matchLen))
+            contigName = rdGpArr[0].rstrip().lstrip()
+            readName = rdGpArr[1].rstrip().lstrip()
+                
         
-        tmp = f.readline()
+            if readStart < readEnd and matchLen> K and min(contigStart,readStart)  < thres and min(lengthDic[contigName]- contigEnd,  lengthDic[readName] - readEnd) < thres:
+                conditionForMatch = True
+            else:
+                conditionForMatch = False
+    
+            if conditionForMatch :
+                if contigStart < thres:
+                    dataSet.append((readName, contigName, 'L',matchLen))
+                
+                if lengthDic[contigName]- contigEnd < thres :
+                    dataSet.append((readName, contigName, 'R',matchLen))
+            
+            tmp = f.readline()
+            
+        f.close()  
         
-    f.close()  
+        
     dataSet.sort()
     
     print "dataSet:", dataSet[0]
@@ -495,7 +507,7 @@ def extractEdgeSet(folderName, mummerLink):
     
     bestMatchPair.sort( key=lambda tup: tup[2], reverse=True)
     
-    print bestMatchPair
+    print "bestMatchPair", bestMatchPair
 
 
     leftConnect = [-1 for i in range(numberOfContig)]
@@ -511,13 +523,13 @@ def extractEdgeSet(folderName, mummerLink):
             rightConnect[prefixContig] = suffixContig
     
     startList= []
-    print leftConnect
+    print "leftConnect", leftConnect
     for i in range(len(leftConnect)):
         if leftConnect[i] == -1:
             startList.append(i)
     
     contigList = []
-    print startList
+    print "startList", startList
     for eachitem in startList:
         tmp = eachitem
         myList = [tmp]
@@ -527,7 +539,7 @@ def extractEdgeSet(folderName, mummerLink):
                 myList.append(tmp)
         contigList.append(myList)
     
-    print contigList
+    print "contigList", contigList
 
             
     i = 0

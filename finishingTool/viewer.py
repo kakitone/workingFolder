@@ -25,7 +25,7 @@ def mainFlowDor():
     mummerLink  = "MUMmer3.23/"
     
 
-    command =mummerLink + "nucmer -mumreference -c 1000 -l 100 -banded -d 10 -p "+folderName+"out "+folderName+"reference.fasta "+folderName+"improved.fasta"
+    command =mummerLink + "nucmer -mumreference -c 1000 -l 100 -banded -d 10 -p "+folderName+"out "+folderName+"reference.fasta "+folderName+"reference.fasta"
     os.system(command)
     
     command  = mummerLink +"delta-filter -1 "+folderName+"out.delta > "+folderName+"out.1delta"
