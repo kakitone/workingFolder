@@ -374,18 +374,30 @@ def extractEdgeSet(folderName, mummerLink):
     fSmaller = open(folderName+ "smaller_improvedContig.fasta", 'w')
 
     tmp = fmyFile.readline().rstrip()
-    maxSize = 30000
+    maxSize = 50000
     dummy = ""
     for i in range(maxSize):
         dummy = dummy + "A"
 
+    myName = ""
     while len(tmp) > 0:
         if tmp[0] == '>':
             fSmaller.write(tmp+'\n')
+            myName = tmp[1:]
         else:
-            fSmaller.write(tmp[0:min(len(tmp), maxSize )] )
+            component = tmp[0:min(len(tmp), maxSize )] 
+            countComp = len(component)
+            fSmaller.write(component)
+            
             fSmaller.write(dummy)
-            fSmaller.write(tmp[max(0, len(tmp)-maxSize):len(tmp)])
+            countComp = countComp + len(dummy)
+            
+            component =tmp[max(0, len(tmp)-maxSize):len(tmp)]
+            fSmaller.write(component)
+            countComp = countComp + len(component)
+            
+            lengthDic[myName] = countComp
+            print "DebugName", myName, countComp
             fSmaller.write('\n')
 
         tmp = fmyFile.readline().rstrip()
@@ -776,9 +788,6 @@ def greedyAlg(mummerLink, folderName):
 def mainFlow(folderName,mummerLink ):
     greedyAlg(mummerLink, folderName)
     newGraphPipeLine(folderName, mummerLink)
-    
-
-
 
 t0 = time.time()
 print 'Number of arguments:', len(sys.argv), 'arguments.'
