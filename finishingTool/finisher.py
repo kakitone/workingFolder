@@ -85,7 +85,7 @@ def findContigLength(folderName, option):
     if option == "contigs":
         print "\n\nfindContigLength(folderName)\n"
         contigLength = {}
-        f = open(folderName + "contigs_Double.fasta", 'r')
+        f = open(folderName + "smaller_contigs_Double.fasta", 'r')
         
         
         tmp1 = f.readline().rstrip()
@@ -214,8 +214,7 @@ def formRelatedReadsFile(folderName,mummerLink):
     
     writeToFile(f2, runningIndex,tempContig[-thres:])
     runningIndex = runningIndex +1
-    
-                    
+                  
     writeToFile(f2, runningIndex,reverseComplement(tempContig[0:thres]))
     runningIndex = runningIndex +1
     
@@ -229,7 +228,7 @@ def formRelatedReadsFile(folderName,mummerLink):
     ### Write double stranded reads
     writeToFile_Double1(folderName, "improved.fasta", "improved_Double.fasta", "contig")
 
-    writeToFile_Double1(folderName, "raw_reads.fasta", "raw_reads_Double.fasta","read")
+    #writeToFile_Double1(folderName, "raw_reads.fasta", "raw_reads_Double.fasta","read")
     
     ### Apply MUMMER on them using cleanedReads against them
     assoiatedReadIndex = []
@@ -406,14 +405,10 @@ def extractEdgeSet(folderName, mummerLink):
     fmyFile.close()
 
     command =mummerLink +"nucmer --maxmatch --simplify -p "+folderName+"outRefine "+ folderName+ "smaller_improvedContig.fasta "+ folderName+ "relatedReads_Double.fasta"
-    #command =mummerLink +"nucmer --maxmatch --simplify -p "+folderName+"outRefine "+ folderName+ "improved_Double.fasta "+ folderName+ "relatedReads_Double.fasta"
-    
     os.system(command)
     
     command  = mummerLink +"show-coords -r "+folderName+"outRefine.delta > "+folderName+"fromMumRefine"
     os.system(command)
-    
-
     
     f = open(folderName + "fromMumRefine", 'r')
     for i in range(6):
@@ -649,8 +644,37 @@ def greedyAlg(mummerLink, folderName):
     
 
     writeToFile_Double1(folderName, "contigs.fasta", "contigs_Double.fasta", "contig")
+    
+    fmyFile = open(folderName+ "contigs_Double.fasta", 'r')
+    fSmaller = open(folderName+ "smaller_contigs_Double.fasta", 'w')
 
-    command =mummerLink +"nucmer --maxmatch --nosimplify -p "+folderName+"greedy "+ folderName+ "contigs_Double.fasta "+ folderName+ "contigs_Double.fasta"
+    tmp = fmyFile.readline().rstrip()
+    maxSize = 50000
+
+    myName = ""
+    while len(tmp) > 0:
+        if tmp[0] == '>':
+            fSmaller.write(tmp+'\n')
+            myName = tmp[1:]
+        else:
+            component = tmp[0:min(len(tmp), maxSize )] 
+            countComp = len(component)
+            fSmaller.write(component)
+            
+            component =tmp[max(0, len(tmp)-maxSize):len(tmp)]
+            fSmaller.write(component)
+            countComp = countComp + len(component)
+            
+
+            print "DebugName", myName, countComp
+            fSmaller.write('\n')
+
+        tmp = fmyFile.readline().rstrip()
+
+    fSmaller.close()
+    fmyFile.close()
+    
+    command =mummerLink +"nucmer --maxmatch --nosimplify -p "+folderName+"greedy "+ folderName+ "smaller_contigs_Double.fasta "+ folderName+ "smaller_contigs_Double.fasta"
     os.system(command)
     
     command  = mummerLink +"show-coords -r "+folderName+"greedy.delta > "+folderName+"fromMumGreedy"
@@ -786,7 +810,7 @@ def greedyAlg(mummerLink, folderName):
     fImproved.close()
     
 def mainFlow(folderName,mummerLink ):
-    greedyAlg(mummerLink, folderName)
+    #greedyAlg(mummerLink, folderName)
     newGraphPipeLine(folderName, mummerLink)
 
 t0 = time.time()
