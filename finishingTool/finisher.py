@@ -374,7 +374,7 @@ def extractEdgeSet(folderName, mummerLink):
     fSmaller = open(folderName+ "smaller_improvedContig.fasta", 'w')
 
     tmp = fmyFile.readline().rstrip()
-    maxSize = 10000
+    maxSize = 30000
     dummy = ""
     for i in range(maxSize):
         dummy = dummy + "A"
