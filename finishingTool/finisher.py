@@ -173,7 +173,7 @@ def formRelatedReadsFile(folderName,mummerLink):
 
     ### Extract heads of the contigs
     print ">formRelatedReadsFile"
-    '''
+    
     f = open(folderName + "improved.fasta", 'r')
     f2 = open(folderName + "improvedTrunc.fasta", 'w')
     temp = f.readline()
@@ -243,10 +243,15 @@ def formRelatedReadsFile(folderName,mummerLink):
         command =mummerLink +"nucmer --maxmatch --nosimplify -p "+folderName+"out "+ folderName+ "improvedTrunc.fasta raw_reads.part-"+str(dummyI)+".fasta"
         os.system(command)
         
-        command  = mummerLink +"show-coords -r "+folderName+"out.delta > "+folderName+"fromMum"+str(dummyI)
+        indexOfMum = ""
+        if dummyI < 10:
+            indexOfMum = "0"+str(dummyI)
+        else:
+            indexOfMum = str(dummyI)
+        command  = mummerLink +"show-coords -r "+folderName+"out.delta > "+folderName+"fromMum"+indexOfMum
         os.system(command)
         
-        f = open(folderName + "fromMum"+str(dummyI), 'r')
+        f = open(folderName + "fromMum"+indexOfMum, 'r')
 
         for i in range(6):
             tmp = f.readline()
@@ -305,18 +310,20 @@ def formRelatedReadsFile(folderName,mummerLink):
     
     print "ckIndex,oneItem: ",ckIndex, oneItem
     f.close()
-    '''
-    
-    
 
     fFilter = open(folderName+"associatedNames.txt", 'r')
+    
+    
+    
     fout = open(folderName+"associatedNames2.txt",'w') 
-    maxCount = 3000
-    for i in range(maxCount):
-        fout.write(fFilter.readline())  
+    maxCount = 5000
+    mytmpDum = fFilter.readline() 
+    while i < maxCount and len(mytmpDum)> 0:
+        fout.write(mytmpDum)  
+        mytmpDum = fFilter.readline() 
+        
     fout.close()   
     fFilter.close()
-
 
     # use all the reads to improve performance
     
@@ -386,10 +393,6 @@ def extractEdgeSet(folderName, mummerLink):
 
     command =mummerLink +"nucmer --maxmatch --simplify -p "+folderName+"outRefine "+ folderName+ "smaller_improvedContig.fasta "+ folderName+ "relatedReads_Double.fasta"
     os.system(command)
-
-
-    #command =mummerLink +"nucmer --maxmatch --simplify -p "+folderName+"outRefine "+ folderName+ "improved_Double.fasta "+ folderName+ "relatedReads_Double.fasta"
-    #os.system(command)
     
     command  = mummerLink +"show-coords -r "+folderName+"outRefine.delta > "+folderName+"fromMumRefine"
     os.system(command)
@@ -767,7 +770,7 @@ def greedyAlg(mummerLink, folderName):
     fImproved.close()
     
 def mainFlow(folderName,mummerLink ):
-    #greedyAlg(mummerLink, folderName)
+    greedyAlg(mummerLink, folderName)
     newGraphPipeLine(folderName, mummerLink)
     
 
