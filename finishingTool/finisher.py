@@ -240,14 +240,16 @@ def formRelatedReadsFile(folderName,mummerLink):
 
     
     for dummyI in range(1, numberOfFiles+1):
-        command =mummerLink +"nucmer --maxmatch --nosimplify -p "+folderName+"out "+ folderName+ "improvedTrunc.fasta raw_reads.part-"+str(dummyI)+".fasta"
-        os.system(command)
-        
         indexOfMum = ""
         if dummyI < 10:
             indexOfMum = "0"+str(dummyI)
         else:
             indexOfMum = str(dummyI)
+        
+        command =mummerLink +"nucmer --maxmatch --nosimplify -p "+folderName+"out "+ folderName+ "improvedTrunc.fasta raw_reads.part-"+indexOfMum+".fasta"
+        os.system(command)
+        
+
         command  = mummerLink +"show-coords -r "+folderName+"out.delta > "+folderName+"fromMum"+indexOfMum
         os.system(command)
         
@@ -375,7 +377,7 @@ def extractEdgeSet(folderName, mummerLink):
     maxSize = 10000
     dummy = ""
     for i in range(maxSize):
-        dummy = dummy + "K"
+        dummy = dummy + "A"
 
     while len(tmp) > 0:
         if tmp[0] == '>':
@@ -392,6 +394,8 @@ def extractEdgeSet(folderName, mummerLink):
     fmyFile.close()
 
     command =mummerLink +"nucmer --maxmatch --simplify -p "+folderName+"outRefine "+ folderName+ "smaller_improvedContig.fasta "+ folderName+ "relatedReads_Double.fasta"
+    #command =mummerLink +"nucmer --maxmatch --simplify -p "+folderName+"outRefine "+ folderName+ "improved_Double.fasta "+ folderName+ "relatedReads_Double.fasta"
+    
     os.system(command)
     
     command  = mummerLink +"show-coords -r "+folderName+"outRefine.delta > "+folderName+"fromMumRefine"
@@ -629,7 +633,7 @@ def greedyAlg(mummerLink, folderName):
     print "Direct greedy"
     
     thres = 7
-    minLen = 800
+    minLen = 400
     
 
     writeToFile_Double1(folderName, "contigs.fasta", "contigs_Double.fasta", "contig")
@@ -782,5 +786,7 @@ print 'Argument List:', str(sys.argv)
 
 folderName = sys.argv[1]
 mummerLink = sys.argv[2]
+
+
 mainFlow(folderName,mummerLink)
 print  "Time",  time.time() - t0
