@@ -173,6 +173,7 @@ def formRelatedReadsFile(folderName,mummerLink):
 
     ### Extract heads of the contigs
     print ">formRelatedReadsFile"
+    
     if False:
         f = open(folderName + "improved.fasta", 'r')
         f2 = open(folderName + "improvedTrunc.fasta", 'w')
@@ -227,7 +228,6 @@ def formRelatedReadsFile(folderName,mummerLink):
         
         ### Write double stranded reads
         writeToFile_Double1(folderName, "improved.fasta", "improved_Double.fasta", "contig")
-    
         #writeToFile_Double1(folderName, "raw_reads.fasta", "raw_reads_Double.fasta","read")
         
         ### Apply MUMMER on them using cleanedReads against them
@@ -309,20 +309,21 @@ def formRelatedReadsFile(folderName,mummerLink):
         
         print "ckIndex,oneItem: ",ckIndex, oneItem
         f.close()
+
+    fFilter = open(folderName+"associatedNames.txt", 'r')
     
-        fFilter = open(folderName+"associatedNames.txt", 'r')
-        
-        
-        
-        fout = open(folderName+"associatedNames2.txt",'w') 
-        maxCount = 50000
+    fout = open(folderName+"associatedNames2.txt",'w') 
+    
+    maxCount = 12000
+    mytmpDum = fFilter.readline() 
+    i=0
+    while i < maxCount and len(mytmpDum)> 0:
+        fout.write(mytmpDum)  
         mytmpDum = fFilter.readline() 
-        while i < maxCount and len(mytmpDum)> 0:
-            fout.write(mytmpDum)  
-            mytmpDum = fFilter.readline() 
-            
-        fout.close()   
-        fFilter.close()
+        i = i+1
+        
+    fout.close()   
+    fFilter.close()
 
     command = "perl -ne 'if(/^>(\S+)/){$c=$i{$1}}$c?print:chomp;$i{$_}=1 if @ARGV' "+folderName+"associatedNames2.txt "+folderName+"raw_reads.fasta > "+folderName+"relatedReads.fasta"
     os.system(command)
@@ -333,8 +334,7 @@ def formRelatedReadsFile(folderName,mummerLink):
     command = "./fasta-splitter.pl --n-parts "+str(numberOfFiles)+" "+ folderName+"relatedReads_Double.fasta"
     os.system(command)
     
-    
-    
+
 def extractEdgeSet(folderName, mummerLink):
     # Tasks: reconstruct the string  graph
     
@@ -372,10 +372,10 @@ def extractEdgeSet(folderName, mummerLink):
     fSmaller = open(folderName+ "smaller_improvedContig.fasta", 'w')
 
     tmp = fmyFile.readline().rstrip()
-    maxSize = 50000
+    maxSize = 25000
     
     dummySeq = ""
-    for i in range(maxSize):
+    for i in range(0):
         dummySeq = dummySeq + "A"
         
     
@@ -476,13 +476,13 @@ def extractEdgeSet(folderName, mummerLink):
             else:
                 contigNum = int(myArr[0][6:])*2 +1
             
-            print subitem[3]
+            print "matchLen", subitem[3]
             if subitem[2] == 'L':
                 left.append([contigNum, subitem[3]])
             else:
                 right.append([contigNum, subitem[3]])
                 
-        print left, right
+        print "left, right", left, right
         #if len(set(left).intersection(set(right))) == 0 and len(set(left))== len(left) and len(set(right)) == len(right):
         #if  len(set(left))== len(left) and len(set(right)) == len(right
             
