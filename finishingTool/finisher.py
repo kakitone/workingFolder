@@ -557,7 +557,8 @@ def extractEdgeSet(folderName, mummerLink):
     for eachitem in startList:
         tmp = eachitem
         myList = [tmp]
-        while rightConnect[tmp] != -1:
+        mystart = tmp
+        while rightConnect[tmp] != -1 and rightConnect[tmp]!=mystart:
             tmp = rightConnect[tmp]
             if tmp != -1:
                 myList.append(tmp)
@@ -807,15 +808,13 @@ def greedyAlg(mummerLink, folderName):
                     checkLoopList[tmp] = True         
                 tmp = rightConnect[tmp]
 
-    
-    
-    
     contigList = []
     print "startList", startList
     for eachitem in startList:
         tmp = eachitem
         myList = [tmp]
-        while rightConnect[tmp] != -1:
+        mystart = tmp
+        while rightConnect[tmp] != -1 and rightConnect[tmp]!=mystart:
             tmp = rightConnect[tmp]
             if tmp != -1:
                 myList.append(tmp)
