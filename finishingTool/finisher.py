@@ -542,11 +542,13 @@ def extractEdgeSet(folderName, mummerLink):
         if checkLoopList[dumdumi] == False:
             startList.append(dumdumi)
             tmp = dumdumi
-            checkLoopList[tmp] = True
+            
             while checkLoopList[tmp] == False :
-                tmp = rightConnect[tmp]
                 if tmp != -1:
                     checkLoopList[tmp] = True
+                    
+                tmp = rightConnect[tmp]
+
     
     
     
@@ -799,11 +801,12 @@ def greedyAlg(mummerLink, folderName):
         if checkLoopList[dumdumi] == False:
             startList.append(dumdumi)
             tmp = dumdumi
-            checkLoopList[tmp] = True
+            
             while checkLoopList[tmp] == False :
-                tmp = rightConnect[tmp]
                 if tmp != -1:
-                    checkLoopList[tmp] = True
+                    checkLoopList[tmp] = True         
+                tmp = rightConnect[tmp]
+
     
     
     
