@@ -236,7 +236,6 @@ def formRelatedReadsFile(folderName,mummerLink):
     numberOfFiles = 20
     command = "./fasta-splitter.pl --n-parts "+str(numberOfFiles)+" "+ folderName+"raw_reads.fasta"
     os.system(command)
-
     
     for dummyI in range(1, numberOfFiles+1):
         indexOfMum = ""
@@ -528,6 +527,29 @@ def extractEdgeSet(folderName, mummerLink):
         if leftConnect[i] == -1:
             startList.append(i)
     
+    print "startList", startList
+    checkLoopList = [False for i in range(len(leftConnect))]
+        
+    for eachitem in startList:
+        tmp = eachitem
+        checkLoopList[tmp] = True
+        while rightConnect[tmp] != -1:
+            tmp = rightConnect[tmp]
+            if tmp != -1:
+                checkLoopList[tmp] = True
+    
+    for dumdumi in range(len(leftConnect)):
+        if checkLoopList[dumdumi] == False:
+            startList.append(dumdumi)
+            tmp = dumdumi
+            checkLoopList[tmp] = True
+            while checkLoopList[tmp] == False :
+                tmp = rightConnect[tmp]
+                if tmp != -1:
+                    checkLoopList[tmp] = True
+    
+    
+    
     contigList = []
     print "startList", startList
     for eachitem in startList:
@@ -757,13 +779,36 @@ def greedyAlg(mummerLink, folderName):
             rightConnect[prefixContig] = suffixContig
     
     startList= []
-    print leftConnect
+    print "leftConnect", leftConnect
     for i in range(len(leftConnect)):
         if leftConnect[i] == -1:
             startList.append(i)
     
+    print "startList", startList
+    checkLoopList = [False for i in range(len(leftConnect))]
+        
+    for eachitem in startList:
+        tmp = eachitem
+        checkLoopList[tmp] = True
+        while rightConnect[tmp] != -1:
+            tmp = rightConnect[tmp]
+            if tmp != -1:
+                checkLoopList[tmp] = True
+    
+    for dumdumi in range(len(leftConnect)):
+        if checkLoopList[dumdumi] == False:
+            startList.append(dumdumi)
+            tmp = dumdumi
+            checkLoopList[tmp] = True
+            while checkLoopList[tmp] == False :
+                tmp = rightConnect[tmp]
+                if tmp != -1:
+                    checkLoopList[tmp] = True
+    
+    
+    
     contigList = []
-    print startList
+    print "startList", startList
     for eachitem in startList:
         tmp = eachitem
         myList = [tmp]
@@ -825,6 +870,13 @@ def mainFlow(folderName,mummerLink ):
     greedyAlg(mummerLink, folderName)
     newGraphPipeLine(folderName, mummerLink)
 
+    os.system("cp raw_reads.* "+ folderName)
+    os.system("rm raw_reads.*")
+    
+    os.system("cp relatedReads_Double.* "+ folderName)
+    os.system("rm relatedReads_Double.*")
+    
+    
 t0 = time.time()
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
