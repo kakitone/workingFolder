@@ -252,7 +252,7 @@ def formRelatedReadsFile(folderName,mummerLink):
             os.system(command)
         
         f = open(folderName + "fromMum"+indexOfMum, 'r')
-
+        # 
         for i in range(6):
             tmp = f.readline()
         
