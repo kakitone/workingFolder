@@ -5,6 +5,7 @@ from collections import deque
 from operator import itemgetter
 import sys
 import time
+import polisher
 
 # This is a test
 ##### House keeping files
@@ -589,7 +590,7 @@ def extractEdgeSet(folderName, mummerLink):
     fOriginal.close()
     
     ### Put the needed rawReads into the RAM using Dictionary
-    #rawReadList
+    
     fAppendRaw = open(folderName+ "appendRaw.txt", 'w')
     for eachraw in rawReadList:
         fAppendRaw.write(eachraw)
@@ -662,11 +663,13 @@ def extractEdgeSet(folderName, mummerLink):
                     newStart = x+y-l
                 else:
                     newStart = 0
-                    extraRead = tmpStore3[x:l-y]
+                    extraRead = performPolishing(leftConnect[eachseg][0], eachseg, tmpStore3[x:l-y],  dataSet, folderName)
+                    #extraRead = tmpStore3[x:l-y]
                     
-                    
-            
+    
             print extraRead[0:10], len(extraRead)
+            
+            
             fImproved.write(extraRead)
             
             if orientation == 0:
@@ -735,6 +738,134 @@ def extractEdgeSet(folderName, mummerLink):
         fout.close()
 
 
+
+
+def performPolishing(contigid_R, contigid_L, mySegment,  dataSet, folderName):
+    ## R,L refer to R/L seekers
+    # dataSet: ('Read100_d', 'Contig0_p', 'R', 684)
+    
+    # Find reads covering one flanking region
+    helperReadsList = []
+    readNum = contigid_R/2
+    orientation = contigid_R%2
+    contigName = ""
+    if orientation == 0:
+        contigName = "Contig"+ str(readNum) + "_p"
+    else:
+        contigName = "Contig"+ str(readNum) + "_d"
+    
+    for key, items in groupby(dataSet, itemgetter(1,2)):
+        if key[0] == contigName and key[1] == 'R':
+            for eachsubitem in items:
+                helperReadsList.append(eachsubitem[0])
+    
+    readNum = contigid_L/2
+    orientation = contigid_L%2
+    contigName = ""
+    if orientation == 0:
+        contigName = "Contig"+ str(readNum) + "_p"
+    else:
+        contigName = "Contig"+ str(readNum) + "_d"
+    
+    for key, items in groupby(dataSet, itemgetter(1,2)):
+        if key[0] == contigName and key[1] == 'L':
+            for eachsubitem in items:
+                helperReadsList.append(eachsubitem[0])    
+
+    f = open(folderName + "helperList.txt", 'w')
+    for eachitem in helperReadsList:
+        f.write(eachitem)
+        f.write('\n')
+    f.close()
+    
+    command = "perl -ne 'if(/^>(\S+)/){$c=$i{$1}}$c?print:chomp;$i{$_}=1 if @ARGV' "+folderName+"helperList.txt "+folderName+"relatedReads_Double.fasta > "+folderName+"SR.fasta"
+    os.system(command)
+
+    f = open(folderName +"LR.fasta", 'w')
+    f.write(">Seg\n")
+    f.write(mySegment)
+    f.close()
+    
+    # Perform error correction using outside tool 
+    helperList = []
+    command =mummerLink +"nucmer --maxmatch --nosimplify -p "+folderName+"helperOut "+ folderName+ "SR.fasta "+ folderName+ "LR.fasta"
+    os.system(command)
+    
+    command  = mummerLink +"show-coords -r "+folderName+"helperOut.delta > "+folderName+"fromhelperOut"
+    os.system(command)
+    
+    f = open(folderName+"fromhelperOut",'r')
+    helperNameList = []
+    
+    for i in range(6):
+        tmp = f.readline()
+
+    while len(tmp) > 0:
+        info = tmp.split('|')
+        filterArr =  info[1].split()
+        rdGpArr = info[-1].split('\t')
+        firstArr = info[0].split()
+        matchLenArr = info[2].split()
+    
+        matchLen = int(matchLenArr[1])    
+        helperStart, helperEnd =  int( firstArr[0]), int( firstArr[1])
+        readStart, readEnd =  int(filterArr[0]) , int(filterArr[1])
+        
+        helperName = rdGpArr[0].rstrip().lstrip()
+        readName = rdGpArr[1].rstrip().lstrip()
+        
+        helperNameList.append(helperName)
+        
+        tmp = f.readline().rstrip()
+                
+    f.close()
+
+    
+    f= open(folderName + "SR.fasta", 'r')
+    temp = f.readline().rstrip()
+    name = ""
+    
+    while(len(temp) > 0):
+        if temp[0] == '>':
+            name = temp[1:]
+        else:
+            if name in helperNameList:
+                helperList.append(temp)
+                
+        temp = f.readline().rstrip()
+    
+    
+    
+    f.close()
+    
+    mySegmentInt, helperIntList= [],[]
+
+    mySegmentInt = covertAlphToInt(mySegment)
+    for eachitem in helperList:
+        helperIntList.append(covertAlphToInt(eachitem))
+    
+        
+    # Return the associated read
+    if len(helperIntList) > 0:
+        polishedSegment = polisher.polishing(mySegmentInt,helperIntList )
+    else:
+        polishedSegment = mySegment
+    
+    
+    return polishedSegment
+
+def covertAlphToInt(mySegmentIn):
+    mySegment = []
+    for eachitem in mySegmentIn:
+        if eachitem == 'A':
+            mySegment.append(1)
+        elif eachitem == 'C':
+            mySegment.append(2)
+        elif eachitem == 'G':
+            mySegment.append(3)
+        elif eachitem == 'T':
+            mySegment.append(4)
+    return mySegment
 
 def newGraphPipeLine(folderName, mummerLink):
     print "newGraphPipeLine"
@@ -927,7 +1058,6 @@ def greedyAlg(mummerLink, folderName):
                 contigUsed[readNum] = True
         if len(tmpList) > 0:
             finalList.append(tmpList)
-        
     
     fImproved = open(folderName +"improved.fasta", 'w')
     for eachcontig, dummyIndex in zip(finalList, range(len(finalList))):
