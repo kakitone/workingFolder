@@ -191,7 +191,7 @@ class seqGraph(object):
         self.graphNodesList = [seqGraphNode(i) for i in range(numberOfNodes)]
         
     def insertEdge(self, i, j, wt):
-        if j != -1:
+        if j != -1 and i!= -1:
             haveInserted = False
             for eachitem in self.graphNodesList[i].listOfNextNodes:
                 if eachitem[0] == j:
@@ -507,10 +507,12 @@ def formSeqGraph(folderName , mummerLink ):
         connector, weight = eachitem
         G.insertEdge(connector, index, weight)
     
+
+    G.reportEdge()
     G.condense()
     G.reportDummyUsefulNode()
-    G.reportEdge()
 
+        
 
 ### 3) X-phased seqGraph (I: startList, graphNodes; O: startList, graphNodes )
 def xPhased(folderName , mummerLink ):
