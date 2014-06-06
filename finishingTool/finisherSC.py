@@ -175,7 +175,25 @@ def readConnectList(folderName, fileName):
     return connectorList
 
 
+def nameInEdgeList(name, myList):
+    
+    haveInserted = False
+    for eachitem in myList:
+        if eachitem[0] == name:
+            haveInserted = True
+    return haveInserted
+                
 
+def removeItem(myList,myname ):
+    newList = []
+    for eachitem in myList:
+        if eachitem[0] != myname:
+            newList.append(eachitem)
+    #print len(newList)- len(myList)
+    return newList
+
+
+    
 class seqGraphNode(object):
     def __init__(self, nodeIndex):
         self.nodeIndex = nodeIndex
@@ -192,19 +210,14 @@ class seqGraph(object):
         
     def insertEdge(self, i, j, wt):
         if j != -1 and i!= -1:
-            haveInserted = False
-            for eachitem in self.graphNodesList[i].listOfNextNodes:
-                if eachitem[0] == j:
-                    haveInserted = True
-            if not   haveInserted:      
+            haveInserted = nameInEdgeList(j, self.graphNodesList[i].listOfNextNodes)
+
+            if not haveInserted:      
                 self.graphNodesList[i].listOfNextNodes.append([j,wt])
                 
                 
-                
-            haveInserted = False   
-            for eachitem in self.graphNodesList[j].listOfPrevNodes:
-                if eachitem[0] == i:
-                    haveInserted = True
+            haveInserted = nameInEdgeList(i, self.graphNodesList[j].listOfPrevNodes) 
+            
             if not haveInserted:      
                 self.graphNodesList[j].listOfPrevNodes.append([i,wt])
                 
@@ -225,7 +238,7 @@ class seqGraph(object):
                     print str(myName)+"->" + str(nextName) +"{weight:" + str(int(wt/1000))+"}"
                 else:
                     print str(myName)+"->" + str(nextName) +"{weight:" + str(0.5)+"}"
-                
+
     def condense(self):
         for eachnode in self.graphNodesList:
             myname = eachnode.nodeIndex
@@ -234,13 +247,17 @@ class seqGraph(object):
                 nextname = eachnextnode[0]
                 wt = eachnextnode[1]
                 
-                if len(eachnode.listOfNextNodes) == 1 and len(eachnode.listOfPrevNodes) == 1:
+                if len(eachnode.listOfNextNodes) == 1 and len(self.graphNodesList[nextname].listOfPrevNodes) == 1:
+                    if myname == 0:
+                        print "here"
                     originalPrev = self.graphNodesList[myname].listOfPrevNodes
                     
                     self.graphNodesList[nextname].nodeIndexList  = self.graphNodesList[myname].nodeIndexList +self.graphNodesList[nextname].nodeIndexList
                     self.graphNodesList[nextname].overlapList =  self.graphNodesList[myname].overlapList +self.graphNodesList[nextname].overlapList
-                    if [myname, wt] in self.graphNodesList[nextname].listOfPrevNodes:
-                        self.graphNodesList[nextname].listOfPrevNodes.remove([myname,wt])
+                    
+                    haveInserted = nameInEdgeList(myname, self.graphNodesList[nextname].listOfPrevNodes)
+                    if haveInserted :
+                        self.graphNodesList[nextname].listOfPrevNodes = removeItem(self.graphNodesList[nextname].listOfPrevNodes, myname)
                     
                     for eachp in originalPrev:  
                         if not eachp in    self.graphNodesList[nextname].listOfPrevNodes:
@@ -253,16 +270,20 @@ class seqGraph(object):
                 
                     for eachoriginalprev in originalPrev:
                         prevname = eachoriginalprev[0]
-                        if [myname,eachoriginalprev[1]] in self.graphNodesList[prevname].listOfNextNodes:
-                            self.graphNodesList[prevname].listOfNextNodes.remove([myname,eachoriginalprev[1]])
+                        #if [myname,eachoriginalprev[1]] in self.graphNodesList[prevname].listOfNextNodes:
+                        haveInserted = nameInEdgeList(myname, self.graphNodesList[prevname].listOfNextNodes)
+                        if haveInserted:
+                            self.graphNodesList[prevname].listOfNextNodes = removeItem(self.graphNodesList[prevname].listOfNextNodes,myname )
+                            #self.graphNodesList[prevname].listOfNextNodes.remove([myname,eachoriginalprev[1]])
                         
-                        self.graphNodesList[prevname].listOfNextNodes.append([nextname, wt])
+                        self.graphNodesList[prevname].listOfNextNodes.append([nextname, eachoriginalprev[1]])
                     
                         
     def reportDummyUsefulNode(self):
         countUseful = 0
         countUseless = 0 
         for eachnode in self.graphNodesList:
+            #print eachnode.listOfNextNodes
             if len(eachnode.nodeIndexList) > 0:
                 countUseful += 1
             else:
@@ -343,8 +364,12 @@ def fetchSuccessor(folderName , mummerLink ):
         
     print "Direct greedy"
     
-    thres = 5
+    thres = 7
     minLen = 400
+    #thres = 10
+    #minLen = 200
+    
+    
     
     writeToFile_Double1(folderName, "contigs.fasta", "contigs_Double.fasta", "contig")
     
@@ -392,14 +417,15 @@ def fetchSuccessor(folderName , mummerLink ):
     for eachitem in dataSetRaw: 
         helperStart, helperEnd , readStart, readEnd, matchLen1, matchLen2, percentMatch, helperName, readName = eachitem 
         
-        if helperName != readName and matchLen1 > minLen and readStart < readEnd  and min(helperStart,readStart) < thres and min(lengthDic[helperName]- helperEnd,  lengthDic[readName] - readEnd) < thres:
+        if helperName != readName and max(matchLen1, matchLen2) > minLen and readStart < readEnd  and min(helperStart,readStart) < thres and min(lengthDic[helperName]- helperEnd,  lengthDic[readName] - readEnd) < thres:
             conditionForMatch = True
         else:
             conditionForMatch = False
 
         if conditionForMatch :
             if helperStart < thres:
-                dataSet.append((matchLen1, readName, helperName))
+                
+                dataSet.append((max(matchLen1, matchLen2), readName, helperName))
     
     dataSet.sort(reverse=True)
     
@@ -413,6 +439,8 @@ def fetchSuccessor(folderName , mummerLink ):
     dataSet.sort(reverse=True, key = itemgetter(1))
     
     for key, items in groupby(dataSet, itemgetter(1)):
+        #if key == "Contig217_d":
+        #    print "dddd"
         maxVal = -1
         myName = key
         connectorName = "" 
@@ -444,6 +472,7 @@ def fetchSuccessor(folderName , mummerLink ):
     dataSet.sort(reverse=True, key = itemgetter(2))
     
     for key, items in groupby(dataSet, itemgetter(2)):
+
         maxVal = -1
         myName = key
         connectorName = "" 
@@ -508,10 +537,10 @@ def formSeqGraph(folderName , mummerLink ):
         G.insertEdge(connector, index, weight)
     
 
-    G.reportEdge()
+    
     G.condense()
     G.reportDummyUsefulNode()
-
+    G.reportEdge()
         
 
 ### 3) X-phased seqGraph (I: startList, graphNodes; O: startList, graphNodes )
