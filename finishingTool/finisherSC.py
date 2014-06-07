@@ -193,6 +193,30 @@ def removeItem(myList,myname ):
     return newList
 
 
+
+
+def quastEvaluate(folderName, quastLink, originalName, improvedNameList, referenceName ):
+    
+    # ./quast.py ~/git/myFinisher/finishingTool/S_cerivisea/contigs.fasta  ~/git/myFinisher/finishingTool/S_cerivisea/improved.fasta -R ~/git/myFinisher/finishingTool/S_cerivisea/reference.fasta
+    header = quastLink + "quast.py"+ " "
+    originalContigPath = folderName + originalName +" "
+    improvedContigPath = folderName 
+    for eachname in improvedNameList:
+        improvedContigPath = improvedContigPath +  eachname + " "
+        
+    
+    referencePath = "-R "+folderName +referenceName +" "
+    
+    command = header + originalContigPath +improvedContigPath +referencePath 
+    
+    os.system(command)
+    
+    
+    command = "cp "+"quast_results/latest/report.txt " + folderName + "assemblyAssessment.txt"
+    os.system(command)
+
+
+
     
 class seqGraphNode(object):
     def __init__(self, nodeIndex):
@@ -552,7 +576,7 @@ def xPhased(folderName , mummerLink ):
 ### 4) EC reduction (I: startList, graphNodes ; O: startList, graphNodes )
 def ECReduction(folderName , mummerLink ):
     print "ECReduction" 
-
+    
 
 ### 5) Read the contigs out (I: startList, graphNodes, ; O:improved.fasta, openZone.txt)
 def readContigOut(folderName, mummerLink):
@@ -567,8 +591,10 @@ def fillGap(folderName , mummerLink):
 ### 7) Compare with reference (I: improved.fasta, improved2.fasta, reference.fasta ; O : assembly assessment report )
 def compareWithReference(folderName , mummerLink):
     print "compareWithReference"
-     
-     
+    
+    quastEvaluate(folderName, "quast-2.3/", originalName = "contigs.fasta", improvedNameList= ["improved.fasta"] , referenceName= "reference.fasta" )
+    
+    
      
 
 ###################################################### Starting point
@@ -576,12 +602,15 @@ def mainFlow(folderName , mummerLink ):
     print "Go Bears! ! !" 
     #removeEmbedded(folderName , mummerLink)
     #fetchSuccessor(folderName , mummerLink )
+    
     formSeqGraph(folderName , mummerLink )
     xPhased(folderName , mummerLink )
     ECReduction(folderName , mummerLink )
     readContigOut(folderName, mummerLink)
     fillGap(folderName , mummerLink)
-    compareWithReference(folderName , mummerLink)
+    
+    
+    #compareWithReference(folderName , mummerLink)
     print "<3 Do cool things that matter <3"
     
     
