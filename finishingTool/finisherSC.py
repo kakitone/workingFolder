@@ -200,9 +200,9 @@ def quastEvaluate(folderName, quastLink, originalName, improvedNameList, referen
     # ./quast.py ~/git/myFinisher/finishingTool/S_cerivisea/contigs.fasta  ~/git/myFinisher/finishingTool/S_cerivisea/improved.fasta -R ~/git/myFinisher/finishingTool/S_cerivisea/reference.fasta
     header = quastLink + "quast.py"+ " "
     originalContigPath = folderName + originalName +" "
-    improvedContigPath = folderName 
+    improvedContigPath = "" 
     for eachname in improvedNameList:
-        improvedContigPath = improvedContigPath +  eachname + " "
+        improvedContigPath = improvedContigPath +folderName+  eachname + " "
         
     
     referencePath = "-R "+folderName +referenceName +" "
@@ -215,9 +215,42 @@ def quastEvaluate(folderName, quastLink, originalName, improvedNameList, referen
     command = "cp "+"quast_results/latest/report.txt " + folderName + "assemblyAssessment.txt"
     os.system(command)
 
+def compareGraphUnitTest(G, G2):
+    assert(len(G.graphNodesList) == len(G2.graphNodesList))
+    for index in range(len(G.graphNodesList)):
+        assert(G.graphNodesList[index].nodeIndex == G2.graphNodesList[index].nodeIndex)
+        assert(G.graphNodesList[index].nodeIndexList == G2.graphNodesList[index].nodeIndexList)
+        assert(G.graphNodesList[index].overlapList == G2.graphNodesList[index].overlapList)
+        assert( G.graphNodesList[index].listOfPrevNodes == G2.graphNodesList[index].listOfPrevNodes)
+        assert( G.graphNodesList[index].listOfNextNodes == G2.graphNodesList[index].listOfNextNodes)
+        assert(G.graphNodesList[index].visited == G2.graphNodesList[index].visited)
 
 
+def loadContigsFromFile(folderName, fileName):
+    f = open(folderName+fileName, 'r')
+    tmp = f.readline().rstrip()
+    dataDic = {}
+    tmpSeq = ""
+    tmpName = ""
     
+    while len(tmp) > 0:
+        
+        if tmp[0] == '>':
+            if len(tmpSeq) != 0:
+                dataDic[tmpName] =tmpSeq
+                tmpSeq = ""
+            tmpName = tmp[1:]
+        else:
+            tmpSeq += tmp
+        tmp  = f.readline().rstrip()
+        
+    dataDic[tmpName] =tmpSeq
+    
+
+    f.close()
+    return dataDic
+
+
 class seqGraphNode(object):
     def __init__(self, nodeIndex):
         self.nodeIndex = nodeIndex
@@ -231,7 +264,59 @@ class seqGraphNode(object):
 class seqGraph(object):
     def __init__(self, numberOfNodes):
         self.graphNodesList = [seqGraphNode(i) for i in range(numberOfNodes)]
+    
+    def loadFromFile(self, folderName, fileName):
         
+        f= open(folderName + fileName, 'r')
+        numberOfNodes = 0 
+        tmp = f.readline().rstrip()
+        while (len(tmp) > 0):
+            tmp = f.readline().rstrip()
+            numberOfNodes += 1
+        f.close()
+        
+        self.graphNodesList = [seqGraphNode(i) for i in range(numberOfNodes)]
+        
+        f= open(folderName + fileName, 'r')
+        tmp = f.readline().rstrip()
+        runningIndex = 0
+        while (len(tmp) > 0):
+            dataList = tmp.split(';')
+            
+
+            for i in range(6):
+                if len(dataList[i]) >0:
+                    myList = dataList[i].split(',')
+                else:
+                    myList = []
+
+                    
+                if i == 0:
+                    self.graphNodesList[runningIndex].nodeIndex = int(dataList[i])
+                elif i == 1:
+                    self.graphNodesList[runningIndex].nodeIndexList = []
+                    for eachitem in myList:
+                        self.graphNodesList[runningIndex].nodeIndexList.append(int(eachitem))
+                        
+                elif i == 2:
+                    self.graphNodesList[runningIndex].overlapList= []
+                    for eachitem in myList:
+                        self.graphNodesList[runningIndex].overlapList.append(int(eachitem))
+                elif i == 3 or i == 4:
+                    for eachitem in myList:
+                        mydata = eachitem.split('-')
+                        if i ==3 :
+                            self.graphNodesList[runningIndex].listOfPrevNodes.append([int(mydata[0]), int(mydata[1])])
+                        elif i == 4:
+                            self.graphNodesList[runningIndex].listOfNextNodes.append([int(mydata[0]), int(mydata[1])])
+                elif i == 5:
+                    self.graphNodesList[runningIndex].visited = int(dataList[i])
+            
+                
+            tmp = f.readline().rstrip()
+            runningIndex  = runningIndex +1 
+        f.close()
+    
     def insertEdge(self, i, j, wt):
         if j != -1 and i!= -1:
             haveInserted = nameInEdgeList(j, self.graphNodesList[i].listOfNextNodes)
@@ -272,12 +357,11 @@ class seqGraph(object):
                 wt = eachnextnode[1]
                 
                 if len(eachnode.listOfNextNodes) == 1 and len(self.graphNodesList[nextname].listOfPrevNodes) == 1:
-                    if myname == 0:
-                        print "here"
+
                     originalPrev = self.graphNodesList[myname].listOfPrevNodes
                     
                     self.graphNodesList[nextname].nodeIndexList  = self.graphNodesList[myname].nodeIndexList +self.graphNodesList[nextname].nodeIndexList
-                    self.graphNodesList[nextname].overlapList =  self.graphNodesList[myname].overlapList +self.graphNodesList[nextname].overlapList
+                    self.graphNodesList[nextname].overlapList =  self.graphNodesList[myname].overlapList +[wt] +self.graphNodesList[nextname].overlapList
                     
                     haveInserted = nameInEdgeList(myname, self.graphNodesList[nextname].listOfPrevNodes)
                     if haveInserted :
@@ -314,7 +398,66 @@ class seqGraph(object):
                 countUseless += 1
                 
         print "useful, useless" ,countUseful, countUseless
+      
+    
+    def checkSelfLoops(self):
+        for eachnode in self.graphNodesList:
+            myIndexList = eachnode.nodeIndexList
+            for eachnext in eachnode.listOfNextNodes:
+                if eachnext[0] in myIndexList:
+                    print  "selfLoop"
         
+    
+    
+    
+    def saveToFile(self, folderName, fileName):
+        ### Format : nodeIndex,nodeIndexList, overlapList, listOfPrevNodes, listOfNextNodes, visited
+        # 3 ; [5, 3] ; [4757]; [[450, 3887], [123,5678]]  ; []; 0
+        # 3 ; 5, 3 ; 4757; 450-3887,123-5678  ; ; 0
+        
+        f = open(folderName + fileName , 'w')
+        for eachnode in self.graphNodesList:
+            mystr = ""
+            mystr =  mystr + str(eachnode.nodeIndex) + ';'
+            
+            for eachitem, index  in  zip(eachnode.nodeIndexList, range(len(eachnode.nodeIndexList))):
+                if index != len(eachnode.nodeIndexList) - 1:
+                    mystr= mystr + str(eachitem) + ','
+                else: 
+                    mystr = mystr + str(eachitem)
+                    
+            mystr = mystr + ';'
+            
+            for eachitem, index in  zip(eachnode.overlapList, range((len(eachnode.overlapList)))):
+                if index != len(eachnode.overlapList)-1:
+                    mystr = mystr + str(eachitem)+ ','
+                else:
+                    mystr = mystr + str(eachitem)
+                
+            mystr = mystr + ';'
+            
+            for eachitem, index in  zip(eachnode.listOfPrevNodes, range(len(eachnode.listOfPrevNodes))):
+                if index != len(eachnode.listOfPrevNodes) - 1:
+                    mystr = mystr  +   str(eachitem[0]) + '-'  + str(eachitem[1]) + ','
+                else:
+                    
+                    mystr = mystr  +   str(eachitem[0]) + '-'  + str(eachitem[1]) 
+            mystr = mystr + ';'
+            
+            for eachitem, index in  zip(eachnode.listOfNextNodes, range(len(eachnode.listOfNextNodes))):
+                if index != len(eachnode.listOfNextNodes) - 1:
+                    mystr = mystr  +   str(eachitem[0]) + '-'  + str(eachitem[1]) + ','
+                else:
+                    
+                    mystr = mystr  +   str(eachitem[0]) + '-'  + str(eachitem[1]) 
+            mystr = mystr + ';'
+                
+
+            mystr = mystr + str(eachnode.visited) + '\n'
+            f.write(mystr)
+            
+        f.close()
+          
     '''
     currentNode.nodeIndexList.extend(targetnextnode.nodeIndexList)
     targetnextnode.nodeIndexList = currentNode.nodeIndexList
@@ -563,8 +706,15 @@ def formSeqGraph(folderName , mummerLink ):
 
     
     G.condense()
-    G.reportDummyUsefulNode()
-    G.reportEdge()
+    G.saveToFile(folderName, "condensedGraph.txt")
+    G.checkSelfLoops()
+    
+    G2 = seqGraph(0)
+    G2.loadFromFile(folderName, "condensedGraph.txt")
+    
+    compareGraphUnitTest(G, G2)
+    #G.reportDummyUsefulNode()
+    #G.reportEdge()
         
 
 ### 3) X-phased seqGraph (I: startList, graphNodes; O: startList, graphNodes )
@@ -580,8 +730,68 @@ def ECReduction(folderName , mummerLink ):
 
 ### 5) Read the contigs out (I: startList, graphNodes, ; O:improved.fasta, openZone.txt)
 def readContigOut(folderName, mummerLink):
-    print "ECReduction"
     
+    print "readContigOut"
+    
+    G = seqGraph(0)
+    G.loadFromFile(folderName, "condensedGraph.txt")
+    
+    myContigsDic = loadContigsFromFile(folderName, "contigs_Double.fasta")
+    
+    contigUsed = [False for i in range(len(G.graphNodesList)/2)]
+     
+    seqToPrint = []
+    
+    for eachnode in G.graphNodesList:
+        if len(eachnode.nodeIndexList) > 0:
+            tmpSeq = ""
+            ### debug consistency of t/f
+            ckList = []
+            for dummy in eachnode.nodeIndexList:
+                indexToAdd = dummy
+                readNum = indexToAdd /2
+                ckList.append(contigUsed[readNum])
+                
+            if len(ckList) >0 and not all(ckList) and any(ckList):
+                print eachnode.nodeIndex, ckList
+            
+            ### end debug 
+            
+            for i in range(len(eachnode.nodeIndexList)):
+                
+                indexToAdd = eachnode.nodeIndexList[i]
+                readNum = indexToAdd /2
+                orientation = indexToAdd %2 
+
+                if contigUsed[readNum] == False:
+                    if i !=len(eachnode.nodeIndexList) -1:
+
+                        overlapLen = eachnode.overlapList[i]
+                        if orientation == 0:
+                            tmpSeq = tmpSeq + myContigsDic['Contig'+str(readNum)+'_'+'p'][0:-overlapLen]
+                        else:
+                            tmpSeq = tmpSeq + myContigsDic['Contig'+str(readNum)+'_'+'d'][0:-overlapLen]
+                    else:
+                        if orientation == 0:
+                            tmpSeq = tmpSeq + myContigsDic['Contig'+str(readNum)+'_'+'p']
+                        else:
+                            tmpSeq = tmpSeq + myContigsDic['Contig'+str(readNum)+'_'+'d']
+                            
+                    
+                    contigUsed[readNum] = True
+            if len(tmpSeq) > 0:
+                seqToPrint.append(tmpSeq)
+    
+    
+    fImproved = open(folderName + 'improved.fasta', 'w')
+    for eachcontig, dummyIndex in zip(seqToPrint, range(len(seqToPrint))):
+        fImproved.write(">Segkk"+str(dummyIndex)+'\n')
+        fImproved.write(eachcontig+'\n')
+         
+    fImproved.close()
+
+    
+
 
 ### 6) Fill gap(I: improved.fasta, openZone,txt ; O: improved2.fasta )
 def fillGap(folderName , mummerLink):
@@ -591,8 +801,7 @@ def fillGap(folderName , mummerLink):
 ### 7) Compare with reference (I: improved.fasta, improved2.fasta, reference.fasta ; O : assembly assessment report )
 def compareWithReference(folderName , mummerLink):
     print "compareWithReference"
-    
-    quastEvaluate(folderName, "quast-2.3/", originalName = "contigs.fasta", improvedNameList= ["improved.fasta"] , referenceName= "reference.fasta" )
+    quastEvaluate(folderName, "quast-2.3/", originalName = "contigs.fasta", improvedNameList= ["noEmbed.fasta", "improved.fasta"] , referenceName= "reference.fasta" )
     
     
      
@@ -602,15 +811,16 @@ def mainFlow(folderName , mummerLink ):
     print "Go Bears! ! !" 
     #removeEmbedded(folderName , mummerLink)
     #fetchSuccessor(folderName , mummerLink )
+    #formSeqGraph(folderName , mummerLink )
     
-    formSeqGraph(folderName , mummerLink )
     xPhased(folderName , mummerLink )
     ECReduction(folderName , mummerLink )
+    
     readContigOut(folderName, mummerLink)
+    
     fillGap(folderName , mummerLink)
     
-    
-    #compareWithReference(folderName , mummerLink)
+    compareWithReference(folderName , mummerLink)
     print "<3 Do cool things that matter <3"
     
     
