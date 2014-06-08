@@ -405,7 +405,7 @@ class seqGraph(object):
             myIndexList = eachnode.nodeIndexList
             for eachnext in eachnode.listOfNextNodes:
                 if eachnext[0] in myIndexList:
-                    print  "selfLoop"
+                    print  "selfLoop" , eachnode.nodeIndex, eachnode.nodeIndexList
         
     
     
@@ -538,10 +538,10 @@ def fetchSuccessor(folderName , mummerLink ):
     
     
     
-    writeToFile_Double1(folderName, "contigs.fasta", "contigs_Double.fasta", "contig")
+    writeToFile_Double1(folderName, "noEmbed.fasta", "noEmbed_Double.fasta", "contig")
     
-    fmyFile = open(folderName+ "contigs_Double.fasta", 'r')
-    fSmaller = open(folderName+ "smaller_contigs_Double.fasta", 'w')
+    fmyFile = open(folderName+ "noEmbed_Double.fasta", 'r')
+    fSmaller = open(folderName+ "noEmbed_contigs_Double.fasta", 'w')
 
     tmp = fmyFile.readline().rstrip()
     maxSize = 50000
@@ -570,10 +570,10 @@ def fetchSuccessor(folderName , mummerLink ):
     fmyFile.close()
     
     if False:
-        useMummerAlign(mummerLink, folderName, "greedy", "smaller_contigs_Double.fasta", "smaller_contigs_Double.fasta")
+        useMummerAlign(mummerLink, folderName, "greedy", "noEmbed_contigs_Double.fasta", "noEmbed_contigs_Double.fasta")
         
         
-    lengthDic = obtainLength(folderName, "smaller_contigs_Double.fasta") 
+    lengthDic = obtainLength(folderName, "noEmbed_contigs_Double.fasta") 
     
     dataSetRaw = extractMumData(folderName, "greedyOut")
     
@@ -736,7 +736,7 @@ def readContigOut(folderName, mummerLink):
     G = seqGraph(0)
     G.loadFromFile(folderName, "condensedGraph.txt")
     
-    myContigsDic = loadContigsFromFile(folderName, "contigs_Double.fasta")
+    myContigsDic = loadContigsFromFile(folderName, "noEmbed_Double.fasta")
     
     contigUsed = [False for i in range(len(G.graphNodesList)/2)]
      
@@ -809,9 +809,9 @@ def compareWithReference(folderName , mummerLink):
 ###################################################### Starting point
 def mainFlow(folderName , mummerLink ):
     print "Go Bears! ! !" 
-    #removeEmbedded(folderName , mummerLink)
-    #fetchSuccessor(folderName , mummerLink )
-    #formSeqGraph(folderName , mummerLink )
+    removeEmbedded(folderName , mummerLink)
+    fetchSuccessor(folderName , mummerLink )
+    formSeqGraph(folderName , mummerLink )
     
     xPhased(folderName , mummerLink )
     ECReduction(folderName , mummerLink )
