@@ -332,21 +332,82 @@ class seqGraph(object):
                 
 
 
-    def findStartList(self):
+    def findStartEndList(self):
+        ### A strict method 
         self.myStartList = []
+        self.myEndList = []
+        self.repeatList = []
+        
         for eachnode in self.graphNodesList:
-            if len(eachnode.listOfPrevNodes) == 0:
-                self.myStartList.append(eachnode)
+            if len(eachnode.nodeIndexList) > 0:
+                if len(eachnode.listOfPrevNodes) == 0 and len(eachnode.listOfNextNodes) <= 1:
+                    self.myStartList.append(eachnode.nodeIndex)
+                    #self.myStartList= self.myStartList + eachnode.nodeIndexList
+   
+                if len(eachnode.listOfNextNodes) == 0 and len(eachnode.listOfPrevNodes) <= 1:
+                    #self.myEndList = self.myEndList + eachnode.nodeIndexList
+                    self.myEndList.append(eachnode.nodeIndex)
+                    
+                if len(eachnode.listOfNextNodes) >=2 or len(eachnode.listOfPrevNodes) >=2 :
+                    self.repeatList.append(eachnode.nodeIndex)
+        
+                    
+        self.myStartList.sort()
+        self.myEndList.sort()
+        #print self.myStartList    
+        #print self.myEndList
+        
     def reportEdge(self):
         for eachnode in self.graphNodesList:
             myName = eachnode.nodeIndex
-            for eachnextnode in eachnode.listOfNextNodes:
-                nextName = eachnextnode[0]
-                wt = eachnextnode[1]
-                if wt > 1000:
-                    print str(myName)+"->" + str(nextName) +"{weight:" + str(int(wt/1000))+"}"
-                else:
-                    print str(myName)+"->" + str(nextName) +"{weight:" + str(0.5)+"}"
+            if len(eachnode.nodeIndexList) > 0:
+                for eachnextnode in eachnode.listOfNextNodes:
+                    nextName = eachnextnode[0]
+                    wt = eachnextnode[1]
+                    if wt > 1000:
+                        print str(myName)+"->" + str(nextName) +"{weight:" + str(int(wt/1000))+"}"
+                    else:
+                        print str(myName)+"->" + str(nextName) +"{weight:" + str(0.5)+"}"
+                        
+        for eachnode in self.graphNodesList:
+            myName = eachnode.nodeIndex
+            if len(eachnode.nodeIndexList) > 0:
+                if len(eachnode.listOfNextNodes) ==0 and len(eachnode.listOfPrevNodes) == 0:
+                    print str(myName)  +"{color:red}"
+
+
+    def cleanEdge(self):
+        toCleanList = []
+        for eachnode in self.graphNodesList:
+            if len(eachnode.nodeIndexList) > 0:
+                myName = eachnode.nodeIndex
+                for eachnextnode in eachnode.listOfNextNodes:
+                    nextName = eachnextnode[0]
+                    wt = eachnextnode[1]
+                    
+                    if myName %2 ==0 :
+                        myCom = myName +1 
+                    else:
+                        myCom = myName -1 
+                    
+                    if nextName %2 ==0 :
+                        nextCom = nextName +1 
+                    else:
+                        nextCom = nextName -1 
+                    
+                    if not  nameInEdgeList(myCom, self.graphNodesList[nextCom].listOfNextNodes) :
+                        toCleanList.append([myName,nextName])
+                
+        print "len(toCleanList)",len(toCleanList) 
+        
+        for eachitem in toCleanList:
+            myName, nextName = eachitem
+            self.removeEdge(myName, nextName)
+            
+    def removeEdge(self, myName, nextName):
+        self.graphNodesList[myName].listOfNextNodes  = removeItem(self.graphNodesList[myName].listOfNextNodes, nextName)
+        self.graphNodesList[nextName].listOfPrevNodes  = removeItem(self.graphNodesList[nextName].listOfPrevNodes, myName)
+                
 
     def condense(self):
         for eachnode in self.graphNodesList:
@@ -401,15 +462,33 @@ class seqGraph(object):
       
     
     def checkSelfLoops(self):
+        ck = True
         for eachnode in self.graphNodesList:
             myIndexList = eachnode.nodeIndexList
+           # print "eachnode.listOfNextNodes", len(eachnode.listOfNextNodes)
+           # print "eachnode.listOfPrevNodes", len(eachnode.listOfPrevNodes)
+            
             for eachnext in eachnode.listOfNextNodes:
                 if eachnext[0] in myIndexList:
-                    print  "selfLoop" , eachnode.nodeIndex, eachnode.nodeIndexList
+                    #print  "selfLoop" , eachnode.nodeIndex, eachnode.nodeIndexList
+                    ck = False
         
+        print "No self-loop existence ?", ck
+        
+            
     
     
-    
+    def checkCompleteness(self):
+        originalNumberOfNodes = len(self.graphNodesList)
+        totalList = []
+        for eachnode in self.graphNodesList:
+            myIndexList = eachnode.nodeIndexList
+            if len(myIndexList) > 0:
+                totalList = totalList + myIndexList
+        
+        print "nodeIndexList conserved ? ", len(totalList)== len(set(totalList)) and len(set(totalList))== originalNumberOfNodes
+            
+        
     def saveToFile(self, folderName, fileName):
         ### Format : nodeIndex,nodeIndexList, overlapList, listOfPrevNodes, listOfNextNodes, visited
         # 3 ; [5, 3] ; [4757]; [[450, 3887], [123,5678]]  ; []; 0
@@ -482,7 +561,7 @@ class seqGraph(object):
 
 def removeEmbedded(folderName , mummerLink):
     print "removeEmbedded"
-    thres = 3
+    thres = 10
     
     if False:
         useMummerAlign(mummerLink, folderName, "self", "contigs.fasta", "contigs.fasta")
@@ -704,17 +783,18 @@ def formSeqGraph(folderName , mummerLink ):
         G.insertEdge(connector, index, weight)
     
 
-    
+    G.cleanEdge()
     G.condense()
     G.saveToFile(folderName, "condensedGraph.txt")
     G.checkSelfLoops()
+    G.checkCompleteness()
     
     G2 = seqGraph(0)
     G2.loadFromFile(folderName, "condensedGraph.txt")
     
     compareGraphUnitTest(G, G2)
-    #G.reportDummyUsefulNode()
-    #G.reportEdge()
+    G.reportDummyUsefulNode()
+    G.reportEdge()
         
 
 ### 3) X-phased seqGraph (I: startList, graphNodes; O: startList, graphNodes )
@@ -735,14 +815,19 @@ def readContigOut(folderName, mummerLink):
     
     G = seqGraph(0)
     G.loadFromFile(folderName, "condensedGraph.txt")
+    G.findStartEndList()
     
     myContigsDic = loadContigsFromFile(folderName, "noEmbed_Double.fasta")
     
     contigUsed = [False for i in range(len(G.graphNodesList)/2)]
      
     seqToPrint = []
+    openList = []
+    
+    noForRevMismatch = True
     
     for eachnode in G.graphNodesList:
+
         if len(eachnode.nodeIndexList) > 0:
             tmpSeq = ""
             ### debug consistency of t/f
@@ -752,8 +837,9 @@ def readContigOut(folderName, mummerLink):
                 readNum = indexToAdd /2
                 ckList.append(contigUsed[readNum])
                 
-            if len(ckList) >0 and not all(ckList) and any(ckList):
-                print eachnode.nodeIndex, ckList
+            if (len(ckList) >0 and not all(ckList) and any(ckList)):
+                noForRevMismatch = False
+                
             
             ### end debug 
             
@@ -762,11 +848,14 @@ def readContigOut(folderName, mummerLink):
                 indexToAdd = eachnode.nodeIndexList[i]
                 readNum = indexToAdd /2
                 orientation = indexToAdd %2 
-
+            
+                    
                 if contigUsed[readNum] == False:
+
                     if i !=len(eachnode.nodeIndexList) -1:
 
                         overlapLen = eachnode.overlapList[i]
+
                         if orientation == 0:
                             tmpSeq = tmpSeq + myContigsDic['Contig'+str(readNum)+'_'+'p'][0:-overlapLen]
                         else:
@@ -777,20 +866,28 @@ def readContigOut(folderName, mummerLink):
                         else:
                             tmpSeq = tmpSeq + myContigsDic['Contig'+str(readNum)+'_'+'d']
                             
-                    
                     contigUsed[readNum] = True
+                    
             if len(tmpSeq) > 0:
+                if eachnode.nodeIndex in G.myStartList or eachnode.nodeIndex in G.myEndList:
+                    openList.append('Segkk' + str(len(seqToPrint)))
+                    
                 seqToPrint.append(tmpSeq)
     
-    
+    print "No forward/reverse mismatch ?",noForRevMismatch
     fImproved = open(folderName + 'improved.fasta', 'w')
     for eachcontig, dummyIndex in zip(seqToPrint, range(len(seqToPrint))):
         fImproved.write(">Segkk"+str(dummyIndex)+'\n')
         fImproved.write(eachcontig+'\n')
          
     fImproved.close()
-
     
+    print "All contigs used? ", all(contigUsed)
+
+    f = open( folderName + "openZone.txt", 'w')
+    for eachitem in openList:
+        f.write(str(eachitem) + str('\n'))
+    f.close()
 
 
 ### 6) Fill gap(I: improved.fasta, openZone,txt ; O: improved2.fasta )
@@ -809,21 +906,20 @@ def compareWithReference(folderName , mummerLink):
 ###################################################### Starting point
 def mainFlow(folderName , mummerLink ):
     print "Go Bears! ! !" 
-    removeEmbedded(folderName , mummerLink)
-    fetchSuccessor(folderName , mummerLink )
-    formSeqGraph(folderName , mummerLink )
+    #removeEmbedded(folderName , mummerLink)
+    #fetchSuccessor(folderName , mummerLink )
+    #formSeqGraph(folderName , mummerLink )
     
     xPhased(folderName , mummerLink )
     ECReduction(folderName , mummerLink )
     
-    readContigOut(folderName, mummerLink)
+    #readContigOut(folderName, mummerLink)
     
     fillGap(folderName , mummerLink)
     
-    compareWithReference(folderName , mummerLink)
+    
+    #compareWithReference(folderName , mummerLink)
     print "<3 Do cool things that matter <3"
-    
-    
     
 folderName = "S_cerivisea/"
 mummerLink = "MUMmer3.23/"
