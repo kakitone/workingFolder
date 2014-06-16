@@ -222,6 +222,7 @@ def reverseComplement(myStr):
             
         elif  myNewStr[i] == 'G' or myNewStr[i] == 'g':
             myNewStr2 += 'C'
+
             
     return myNewStr2
 
@@ -409,11 +410,11 @@ class seqGraph(object):
         
         for eachnode in self.graphNodesList:
             if len(eachnode.nodeIndexList) > 0:
-                if len(eachnode.listOfPrevNodes) == 0 and len(eachnode.listOfNextNodes) <= 1:
+                if len(eachnode.listOfPrevNodes) == 0 :
                     self.myStartList.append(eachnode.nodeIndex)
                     #self.myStartList= self.myStartList + eachnode.nodeIndexList
    
-                if len(eachnode.listOfNextNodes) == 0 and len(eachnode.listOfPrevNodes) <= 1:
+                if len(eachnode.listOfNextNodes) == 0 :
                     #self.myEndList = self.myEndList + eachnode.nodeIndexList
                     self.myEndList.append(eachnode.nodeIndex)
                     
@@ -605,24 +606,61 @@ class seqGraph(object):
             f.write(mystr)
             
         f.close()
-          
-    '''
-    currentNode.nodeIndexList.extend(targetnextnode.nodeIndexList)
-    targetnextnode.nodeIndexList = currentNode.nodeIndexList
-    currentNode.nodeIndexList = deque()
 
-    for eachprevnode in currentNode.listOfPrevNodes:
-        eachprevnode.listOfNextNodes.append(targetnextnode)
-        targetnextnode.listOfPrevNodes.append(eachprevnode)
-        eachprevnode.listOfNextNodes.remove(currentNode)
 
-    targetnextnode.listOfPrevNodes.remove(currentNode)                    
-    currentNode.listOfPrevNodes = []
-    currentNode.listOfNextNodes = []
+    def MBResolve(self):
+        ### Algorithm for resolving the repeats in string graph by MB 
+        #1 ) Log down the 1 successor / 1 predecessor nodes[cf: edge] and their associated weights
+        #2 ) Sort according to edge weights
+        #3 ) Make commitment and  remove edges from both sides
+        #4 ) Condense graph 
+        #5 ) Go back to 1 unless no such nodes exist any more 
+        
+        
+        oneSucList, onePreList = [-1] , [-1]
+        
+        while len(oneSucList)>0 or len(onePreList)> 0:
+            oneSucList, onePreList = [] , []
+            
+            for eachnode in self.graphNodesList:
+                if len(eachnode.nodeIndexList) > 0 :
+                    if len(eachnode.listOfNextNodes) == 1 :
+                        oneSucList.append([eachnode.nodeIndex, eachnode.listOfNextNodes[0][0],eachnode.listOfNextNodes[0][1] ])
+                    if len(eachnode.listOfPrevNodes) == 1: 
+                        onePreList.append([eachnode.listOfPrevNodes[0][0], eachnode.nodeIndex,eachnode.listOfPrevNodes[0][1] ])
+            
+             
+            print "oneSucList", oneSucList 
+            print "onePreList", onePreList
+            
+            oneSucList.sort(key=itemgetter(2), reverse = True)
+            onePreList.sort(key = itemgetter(2), reverse = True)
+            
+            for eachitem in oneSucList:
+                i, j, wt  = eachitem[0], eachitem[1] , eachitem[2]
+                if nameInEdgeList(i ,self.graphNodesList[j].listOfPrevNodes):
+                    removeList = []
+                    for eachprev in self.graphNodesList[j].listOfPrevNodes:
+                        if eachprev[0] != i :
+                            removeList.append(eachprev[0])
+                    
+                    for eachToRemove in removeList:
+                        self.removeEdge(eachToRemove, j)
     
+            for eachitem in onePreList:
+                i, j, wt  = eachitem[0], eachitem[1] , eachitem[2]
+                if nameInEdgeList(j ,self.graphNodesList[i].listOfNextNodes):
+                    removeList = []
+                    for eachnext in self.graphNodesList[i].listOfNextNodes:
+                        if eachnext[0] != j :
+                            removeList.append(eachnext[0])
+                    
+                    for eachToRemove in removeList:
+                        self.removeEdge(i, eachToRemove)
     
-    '''
-
+                
+            self.condense()
+        
 
 def loadOpenList(folderName):
     
@@ -644,13 +682,11 @@ def loadOpenList(folderName):
     
     f.close() 
     
+    print "usableJunction", usableJunction
     return usableJunction
 
 
 
-###################################################### Key functions
-
-### 0) Preprocess by removing embedded contigs (I: contigs.fasta ; O : noEmbed.fasta)
 
 def writeToFile(f2, runningIndex,seq):
     f2.write(">Seg_"+ str(runningIndex))
@@ -728,9 +764,11 @@ def formRelatedReadsFile(folderName,mummerLink):
     ### Apply MUMMER on them using cleanedReads against them
     assoiatedReadIndex = []
     nameList = []
+    
     numberOfFiles = 20
-    command = "./fasta-splitter.pl --n-parts "+str(numberOfFiles)+" "+ folderName+"raw_reads.fasta"
-    os.system(command)
+    if False:
+        command = "./fasta-splitter.pl --n-parts "+str(numberOfFiles)+" "+ folderName+"raw_reads.fasta"
+        os.system(command)
     
     for dummyI in range(1, numberOfFiles+1):
         indexOfMum = ""
@@ -778,7 +816,7 @@ def formRelatedReadsFile(folderName,mummerLink):
 
     assoiatedReadIndex.sort()
     
-    print "assoiatedReadIndex", assoiatedReadIndex
+    #print "assoiatedReadIndex", assoiatedReadIndex
     
     ckIndex = 0
     f = open(folderName+"associatedNames.txt", 'w')
@@ -825,8 +863,9 @@ def formRelatedReadsFile(folderName,mummerLink):
     writeToFile_Double1(folderName, "relatedReads.fasta", "relatedReads_Double.fasta","read")
     
     numberOfFiles = 20
-    command = "./fasta-splitter.pl --n-parts "+str(numberOfFiles)+" "+ folderName+"relatedReads_Double.fasta"
-    os.system(command)
+    if False:
+        command = "./fasta-splitter.pl --n-parts "+str(numberOfFiles)+" "+ folderName+"relatedReads_Double.fasta"
+        os.system(command)
     
 
 def extractEdgeSet(folderName, mummerLink, option= "nopolish"):
@@ -956,41 +995,13 @@ def extractEdgeSet(folderName, mummerLink, option= "nopolish"):
     
     ### repeat aware
     usableJunction = loadOpenList(folderName)
-    dataSet = filterRepeatEnd(dataSet, usableJunction)
-    
-    ### repeeat aware end
+    dataSet, blockedSet = filterRepeatEnd(dataSet, usableJunction)
+    ### repeat aware end
     
     dataSet.sort()
-    matchPair = []
-    for key, items in groupby(dataSet, itemgetter(0)):
-        left = []
-        right = []
-        
-        for subitem in items:
-
-            myArr =subitem[1].split('_')
-            orientation = myArr[1]
-
-            if orientation == 'p' :
-                contigNum = int(myArr[0][6:])*2
-            else:
-                contigNum = int(myArr[0][6:])*2 +1
-            
-            if subitem[2] == 'L':
-                left.append([contigNum, subitem[3]])
-            else:
-                right.append([contigNum, subitem[3]])
-
-        for eachleft in left:
-            for eachright in right:
-                leftIndex , rightIndex = eachleft[0], eachright[0]
-                leftLen, rightLen = eachleft[1], eachright[1]
-                
-                if leftIndex != rightIndex:
-                    matchPair.append([rightIndex, leftIndex, min(leftLen,rightLen),  rightLen,leftLen, key])
-
-    matchPair.sort()
-        
+    matchPair = formMatchPairFromReadInfo(dataSet)
+    
+    #print matchPair
     keyFound = []
     bestMatchPair = []
     rawReadList = []
@@ -1071,7 +1082,13 @@ def extractEdgeSet(folderName, mummerLink, option= "nopolish"):
     
     print "contigList", contigList
 
-            
+    
+    ### repeat aware logging
+    myExtraLinkList = loggingReadsToRepeat(blockedSet+dataSet, contigList)
+    print "myExtraLinkList", myExtraLinkList
+    ### end repeat aware logging
+    
+    
     i = 0
     fOriginal = open(folderName + "improved.fasta", 'r')
     readSet = []
@@ -1124,6 +1141,8 @@ def extractEdgeSet(folderName, mummerLink, option= "nopolish"):
     
     seqToPrint = []
     contigUsed = [False for i in range(numberOfContig/2)]
+    storedStrand = [[-1,'n'] for i in range(numberOfContig)]
+    
     fAllInOne = open(folderName+"allInOne2.fasta",'w' )
     finalList = []
     for eachContig, i in zip(contigList, range(len(contigList))):
@@ -1135,9 +1154,27 @@ def extractEdgeSet(folderName, mummerLink, option= "nopolish"):
                 seqToPrint.append(eachitem)
                 tmpList.append(eachitem)
                 contigUsed[readNum] = True
+                ### mark ouput strandinfo
+                storedStrand[eachitem]  = [len(finalList), 'p']
+                
+                
         if len(tmpList) > 0:
             finalList.append(tmpList)
-        
+    
+    
+    for kkk in range(len(storedStrand)):
+        if storedStrand[kkk][1] == 'n':
+            if kkk %2 ==0:
+                storedStrand[kkk][0] = storedStrand[kkk+1][0]
+                storedStrand[kkk][1] = 'd'
+            else:
+                storedStrand[kkk][0] = storedStrand[kkk-1][0]
+                storedStrand[kkk][1] = 'd'
+    
+    ### begin stored output blocked pairs
+    blockExtraStored(storedStrand,myExtraLinkList,folderName )
+    ### end output blocked pairs stored
+    
     
     fImproved = open(folderName +"improved2.fasta", 'w')
     
@@ -1244,13 +1281,15 @@ def extractEdgeSet(folderName, mummerLink, option= "nopolish"):
 
 def filterRepeatEnd(dataSet, usableJunction):
     newDataSet = []
+    blockedSet = []
     # Format : dataSet.append((readName, contigName, 'R',matchLen)) 
     for eachitem in dataSet:
         readName, contigName, seekDir, matchLen = eachitem
-        print contigName
+        #print contigName
         myInfo = contigName[6:].split('_')
         index, orient = int(myInfo[0]), myInfo[1]
         
+        #print "index, orient", index, orient
         check = False
         if orient == 'p':
             if usableJunction[index][0] == 1 and seekDir == 'L':
@@ -1266,8 +1305,206 @@ def filterRepeatEnd(dataSet, usableJunction):
 
         if check:
             newDataSet.append(eachitem)
+        else:
+            blockedSet.append(eachitem)
+    
 
-    return newDataSet 
+
+    return newDataSet, blockedSet
+
+def obtainLinkInfo(folderName, mummerLink,inputFile, mummerFile):
+    thres = 5
+    minLen = 400
+    #thres = 10
+    #minLen = 200
+    
+    
+    writeToFile_Double1(folderName, inputFile+".fasta", inputFile+"_Double.fasta", "contig")
+    
+    fmyFile = open(folderName+ inputFile+"_Double.fasta", 'r')
+    fSmaller = open(folderName+ inputFile+"_contigs_Double.fasta", 'w')
+
+    tmp = fmyFile.readline().rstrip()
+    maxSize = 50000
+
+    myName = ""
+    while len(tmp) > 0:
+        if tmp[0] == '>':
+            fSmaller.write(tmp+'\n')
+            myName = tmp[1:]
+        else:
+            component = tmp[0:min(len(tmp), maxSize )] 
+            countComp = len(component)
+            fSmaller.write(component)
+            
+            component =tmp[max(0, len(tmp)-maxSize):len(tmp)]
+            fSmaller.write(component)
+            countComp = countComp + len(component)
+            
+
+            print "DebugName", myName, countComp
+            fSmaller.write('\n')
+
+        tmp = fmyFile.readline().rstrip()
+
+    fSmaller.close()
+    fmyFile.close()
+    
+    if False:
+        useMummerAlign(mummerLink, folderName, mummerFile, inputFile+"_contigs_Double.fasta", inputFile+"_contigs_Double.fasta")
+        
+        
+    lengthDic = obtainLength(folderName, inputFile+"_contigs_Double.fasta") 
+    
+    dataSetRaw = extractMumData(folderName, mummerFile+"Out")
+    
+    ### Format [ helperStart, helperEnd , readStart, readEnd,matchLen1,matchLen2,percentMatch,helperName,readName]
+    
+    
+    dataSet = []
+    
+    for eachitem in dataSetRaw: 
+        helperStart, helperEnd , readStart, readEnd, matchLen1, matchLen2, percentMatch, helperName, readName = eachitem 
+        
+        detailHelper = helperName.split('_')
+        detailRead = readName.split('_')
+        
+
+        if detailHelper[0]!= detailRead[0] and  helperName != readName and max(matchLen1, matchLen2) > minLen and readStart < readEnd  and min(helperStart,readStart) < thres and min(lengthDic[helperName]- helperEnd,  lengthDic[readName] - readEnd) < thres:
+            conditionForMatch = True
+        else:
+            conditionForMatch = False
+
+        if conditionForMatch :
+            if helperStart < thres:
+                
+                dataSet.append((max(matchLen1, matchLen2), readName, helperName))
+    
+    dataSet.sort(reverse=True)
+    
+    numberOfContig = len(lengthDic)
+    
+    return numberOfContig, dataSet
+
+
+def loggingReadsToRepeat(blockedSet, contigList):
+    
+    for eachitem in blockedSet:
+        print eachitem
+    
+    matchPair = formMatchPairFromReadInfo(blockedSet)
+    matchPair.sort()
+    
+    print "loggingReadsToRepeat" 
+    
+    startList = []
+    endList = []
+    
+    returnList = []
+    
+    for eachitem in contigList:
+        startList.append(eachitem[0])
+        endList.append(eachitem[-1])
+    
+    #print startList, endList
+    for eachitem in matchPair: 
+        mystart = eachitem[0]
+        myend = eachitem[1]
+        
+        
+        if myend in startList and mystart in endList :
+            returnList.append([mystart, myend])
+            #print eachitem
+    
+    returnList.sort()
+
+    return returnList
+
+        
+def blockExtraStored(storedStrand,myExtraLinkList,folderName ):
+    print "blockExtraStored"
+    myExtraLinkList.sort()
+    f  = open(folderName + 'extraConnect.txt','w')
+    for key, items in groupby(myExtraLinkList, itemgetter(0,1)):
+        mystart = key[0]
+        myend = key[1]
+        f.write(str(storedStrand[mystart][0])+'_'+storedStrand[mystart][1]+';'+ str(storedStrand[myend][0])+'_'+storedStrand[myend][1]+'\n')
+
+    f.close()
+    #print storedStrand 
+    #print myExtraLinkList
+        
+
+def loadEdgeFromBlockedReads(folderName):
+    extraEdges = []
+    f= open(folderName + 'extraConnect.txt','r')
+    tmp = f.readline().rstrip()
+    while len(tmp) >0 :
+        myInfo = tmp.split(';')
+        inNode = myInfo[0].split('_')
+        outNode = myInfo[1].split('_')
+        
+        myInIndex , myOutIndex  = 1997, 1997 
+        if inNode[1] == 'p':
+            myInIndex = 2*int(inNode[0])
+        else:
+            myInIndex = 2*int(inNode[0]) +1 
+        
+        if outNode[1] == 'p':
+            myOutIndex = 2*int(outNode[0])
+        else:
+            myOutIndex = 2*int(outNode[0]) +1 
+        
+        extraEdges.append([myInIndex, myOutIndex])
+        tmp = f.readline().rstrip()
+    
+    f.close()
+    print extraEdges
+    return extraEdges
+
+
+
+def formMatchPairFromReadInfo(dataSet):
+    dataSet.sort()
+    
+    
+    matchPair = []
+    for key, items in groupby(dataSet, itemgetter(0)):
+        #print "key", key
+        left = []
+        right = []
+        
+        for subitem in items:
+
+            myArr =subitem[1].split('_')
+            orientation = myArr[1]
+
+            if orientation == 'p' :
+                contigNum = int(myArr[0][6:])*2
+            else:
+                contigNum = int(myArr[0][6:])*2 +1
+            
+            if subitem[2] == 'L':
+                left.append([contigNum, subitem[3]])
+            else:
+                right.append([contigNum, subitem[3]])
+
+        for eachleft in left:
+            for eachright in right:
+                leftIndex , rightIndex = eachleft[0], eachright[0]
+                leftLen, rightLen = eachleft[1], eachright[1]
+                
+                if leftIndex != rightIndex and leftIndex/2 != rightIndex/2:
+                    matchPair.append([rightIndex, leftIndex, min(leftLen,rightLen),  rightLen,leftLen, key])
+
+    matchPair.sort()
+    return matchPair
+
+
+###################################################### Key functions
+
+### 0) Preprocess by removing embedded contigs (I: contigs.fasta ; O : noEmbed.fasta)
+
 
 def removeEmbedded(folderName , mummerLink):
     print "removeEmbedded"
@@ -1322,74 +1559,7 @@ def fetchSuccessor(folderName , mummerLink ):
     left_connect, right_connect = [],[] 
         
     print "Direct greedy"
-    
-    thres = 7
-    minLen = 400
-    #thres = 10
-    #minLen = 200
-    
-    
-    
-    writeToFile_Double1(folderName, "noEmbed.fasta", "noEmbed_Double.fasta", "contig")
-    
-    fmyFile = open(folderName+ "noEmbed_Double.fasta", 'r')
-    fSmaller = open(folderName+ "noEmbed_contigs_Double.fasta", 'w')
-
-    tmp = fmyFile.readline().rstrip()
-    maxSize = 50000
-
-    myName = ""
-    while len(tmp) > 0:
-        if tmp[0] == '>':
-            fSmaller.write(tmp+'\n')
-            myName = tmp[1:]
-        else:
-            component = tmp[0:min(len(tmp), maxSize )] 
-            countComp = len(component)
-            fSmaller.write(component)
-            
-            component =tmp[max(0, len(tmp)-maxSize):len(tmp)]
-            fSmaller.write(component)
-            countComp = countComp + len(component)
-            
-
-            print "DebugName", myName, countComp
-            fSmaller.write('\n')
-
-        tmp = fmyFile.readline().rstrip()
-
-    fSmaller.close()
-    fmyFile.close()
-    
-    if False:
-        useMummerAlign(mummerLink, folderName, "greedy", "noEmbed_contigs_Double.fasta", "noEmbed_contigs_Double.fasta")
-        
-        
-    lengthDic = obtainLength(folderName, "noEmbed_contigs_Double.fasta") 
-    
-    dataSetRaw = extractMumData(folderName, "greedyOut")
-    
-    ### Format [ helperStart, helperEnd , readStart, readEnd,matchLen1,matchLen2,percentMatch,helperName,readName]
-        
-    dataSet = []
-    
-    for eachitem in dataSetRaw: 
-        helperStart, helperEnd , readStart, readEnd, matchLen1, matchLen2, percentMatch, helperName, readName = eachitem 
-        
-        if helperName != readName and max(matchLen1, matchLen2) > minLen and readStart < readEnd  and min(helperStart,readStart) < thres and min(lengthDic[helperName]- helperEnd,  lengthDic[readName] - readEnd) < thres:
-            conditionForMatch = True
-        else:
-            conditionForMatch = False
-
-        if conditionForMatch :
-            if helperStart < thres:
-                
-                dataSet.append((max(matchLen1, matchLen2), readName, helperName))
-    
-    dataSet.sort(reverse=True)
-    
-    numberOfContig = len(lengthDic)
-    
+    numberOfContig, dataSet = obtainLinkInfo(folderName, mummerLink,"noEmbed", "greedy")
     # [next_item, overlap_length]
     
     leftConnect = [[-1,-1] for i in range(numberOfContig)]
@@ -1508,25 +1678,75 @@ def formSeqGraph(folderName , mummerLink ):
     compareGraphUnitTest(G, G2)
     G.reportDummyUsefulNode()
     G.reportEdge()
-        
+    
+    graphFileName = "condensedGraph.txt"
+    contigFile = "noEmbed_Double.fasta"
+    outContigFile = "improved.fasta"
+    outOpenList = "openZone.txt"
+    
+    readContigOut(folderName, mummerLink, graphFileName,contigFile, outContigFile, outOpenList)
+   
+    
 
 ### 3) X-phased seqGraph (I: startList, graphNodes; O: startList, graphNodes )
 def xPhased(folderName , mummerLink ):
     ### Repeat resolution  [Proxy for MB]
-    # 1. Log down the reads and associated blocked contigs
-    # 2. Re-form the contig string graph with ALL connections from contigs only
-    # 3. Transform graph by identifying 1 successor/predecessor case ; Condense(important);
-    # 4. Use reads to connect;
+    # 1. Re-form the contig string graph with ALL connections from contigs only V
+    # 2. Log down the reads and associated blocked contigs V 
+    # 3. Use reads to connect;
+    # 4. Transform graph by identifying 1 successor/predecessor case ; Condense(important);
     # 5. Read out contigs
     
+    numberOfContig, dataSet = obtainLinkInfo(folderName, mummerLink,"improved2", "mb")
     
+    G = seqGraph(numberOfContig)
+    for eachitem in dataSet:
+        #print eachitem
+        wt, myin, myout = eachitem
+        myInData = myin[6:].split('_')
+        myOutData = myout[6:].split('_')
+        
+        if myInData[1] == 'p':
+            offsetin = 0
+        else:
+            offsetin = 1
+        
+        if myOutData[1] == 'p':
+            offsetout = 0
+        else:
+            offsetout = 1
+            
+        i =int(myInData[0])*2 + offsetin
+        j = int(myOutData[0])*2 + offsetout
+        
+        G.insertEdge(i, j, wt)
+    
+    extraEdges = []
+    #extraEdges = loadEdgeFromBlockedReads(folderName)
+        
+    for eachedge in extraEdges:
+        G.insertEdge(eachedge[0],eachedge[1], 0)
+    
+    
+    G.reportEdge()
+    G.MBResolve()
+    G.reportEdge()
+        
+    G.saveToFile(folderName, "condensedGraphMB.txt")
+    graphFileName = "condensedGraphMB.txt"
+    contigFile = "improved2_Double.fasta"
+    outContigFile = "improved3.fasta"
+    outOpenList = "openZoneMB.txt"
+    
+    readContigOut(folderName, mummerLink, graphFileName,contigFile, outContigFile, outOpenList)
     
     
     ### Repeat resolution  [Proxy for phasing step]
     # 6. Find out the repeat region by MSA
     # 7. Find out the location of SNPs and extend across repeat 
-
-
+    # [short cut : use contig creator : your job here is to get data into the correct formats]
+    
+    
     
     
     print "xPhased"
@@ -1539,15 +1759,15 @@ def ECReduction(folderName , mummerLink ):
     
 
 ### 5) Read the contigs out (I: startList, graphNodes, ; O:improved.fasta, openZone.txt)
-def readContigOut(folderName, mummerLink):
+def readContigOut(folderName, mummerLink, graphFileName,contigFile, outContigFile, outOpenList):
     
     print "readContigOut"
     
     G = seqGraph(0)
-    G.loadFromFile(folderName, "condensedGraph.txt")
+    G.loadFromFile(folderName,graphFileName )
     G.findStartEndList()
     
-    myContigsDic = loadContigsFromFile(folderName, "noEmbed_Double.fasta")
+    myContigsDic = loadContigsFromFile(folderName, contigFile)
     
     contigUsed = [False for i in range(len(G.graphNodesList)/2)]
      
@@ -1603,10 +1823,20 @@ def readContigOut(folderName, mummerLink):
                     openList.append('Segkk' + str(len(seqToPrint))+',noprev')
                 if eachnode.nodeIndex in G.myEndList:
                     openList.append('Segkk' + str(len(seqToPrint))+',nonext')
+                
+                ### Debug
+                if eachnode.nodeIndex == 444:
+                    print 439, len(seqToPrint)
+                
+                if eachnode.nodeIndex == 67 :
+                    print 67, len(seqToPrint)
+                    
+                    
+                ### End Debug
                 seqToPrint.append(tmpSeq)
     
     print "No forward/reverse mismatch ?",noForRevMismatch
-    fImproved = open(folderName + 'improved.fasta', 'w')
+    fImproved = open(folderName + outContigFile, 'w')
     for eachcontig, dummyIndex in zip(seqToPrint, range(len(seqToPrint))):
         fImproved.write(">Segkk"+str(dummyIndex)+'\n')
         fImproved.write(eachcontig+'\n')
@@ -1615,7 +1845,7 @@ def readContigOut(folderName, mummerLink):
     
     print "All contigs used? ", all(contigUsed)
 
-    f = open( folderName + "openZone.txt", 'w')
+    f = open( folderName + outOpenList, 'w')
     f.write(str(len(seqToPrint))+'\n')
     for eachitem in openList:
         f.write(str(eachitem) + str('\n'))
@@ -1649,7 +1879,7 @@ def fillGap(folderName , mummerLink):
 ### 7) Compare with reference (I: improved.fasta, improved2.fasta, reference.fasta ; O : assembly assessment report )
 def compareWithReference(folderName , mummerLink):
     print "compareWithReference"
-    quastEvaluate(folderName, "quast-2.3/", originalName = "contigs.fasta", improvedNameList= ["noEmbed.fasta", "improved.fasta", "improved2.fasta"] , referenceName= "reference.fasta" )
+    quastEvaluate(folderName, "quast-2.3/", originalName = "contigs.fasta", improvedNameList= ["noEmbed.fasta", "improved.fasta", "improved2.fasta", "improved3.fasta"] , referenceName= "reference.fasta" )
     #quastEvaluate(folderName, "quast-2.3/", originalName = "contigs.fasta", improvedNameList= ["noEmbed.fasta", "improved.fasta"] , referenceName= "reference.fasta" )
     
     
@@ -1658,20 +1888,19 @@ def compareWithReference(folderName , mummerLink):
 ###################################################### Starting point
 def mainFlow(folderName , mummerLink ):
     print "Go Bears! ! !" 
-    #removeEmbedded(folderName , mummerLink)
-    #fetchSuccessor(folderName , mummerLink )
-    #formSeqGraph(folderName , mummerLink )
-    #readContigOut(folderName, mummerLink)
+    removeEmbedded(folderName , mummerLink)
+    fetchSuccessor(folderName , mummerLink )
+    formSeqGraph(folderName , mummerLink )
     fillGap(folderName , mummerLink)
     
     xPhased(folderName , mummerLink )
-    ECReduction(folderName , mummerLink )
+    #ECReduction(folderName , mummerLink )
     
     
     #compareWithReference(folderName , mummerLink)
     print "<3 Do cool things that matter <3"
     
-folderName = "EcoliTestRun/"
+folderName = "S_cerivisea/"
 mummerLink = "MUMmer3.23/"
 
 mainFlow(folderName,mummerLink)
