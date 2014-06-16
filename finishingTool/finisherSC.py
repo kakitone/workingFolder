@@ -766,7 +766,7 @@ def formRelatedReadsFile(folderName,mummerLink):
     nameList = []
     
     numberOfFiles = 20
-    if False:
+    if True:
         command = "./fasta-splitter.pl --n-parts "+str(numberOfFiles)+" "+ folderName+"raw_reads.fasta"
         os.system(command)
     
@@ -777,7 +777,7 @@ def formRelatedReadsFile(folderName,mummerLink):
         else:
             indexOfMum = str(dummyI)
         
-        if False:
+        if True:
             command =mummerLink +"nucmer --maxmatch --nosimplify -p "+folderName+"out "+ folderName+ "improvedTrunc.fasta raw_reads.part-"+indexOfMum+".fasta"
             os.system(command)
     
@@ -863,7 +863,7 @@ def formRelatedReadsFile(folderName,mummerLink):
     writeToFile_Double1(folderName, "relatedReads.fasta", "relatedReads_Double.fasta","read")
     
     numberOfFiles = 20
-    if False:
+    if True:
         command = "./fasta-splitter.pl --n-parts "+str(numberOfFiles)+" "+ folderName+"relatedReads_Double.fasta"
         os.system(command)
     
@@ -949,7 +949,7 @@ def extractEdgeSet(folderName, mummerLink, option= "nopolish"):
         else:
             indexOfMum = str(dummyI)
 
-        if False:
+        if True:
             command =mummerLink +"nucmer --maxmatch --simplify -p "+folderName+"outRefine "+ folderName+ "smaller_improvedContig.fasta "+ "relatedReads_Double.part-"+indexOfMum+".fasta"
             os.system(command)
             
@@ -974,9 +974,8 @@ def extractEdgeSet(folderName, mummerLink, option= "nopolish"):
             
             contigName = rdGpArr[0].rstrip().lstrip()
             readName = rdGpArr[1].rstrip().lstrip()
-                
-        
-            if readStart < readEnd and matchLen> K and min(contigStart,readStart)  < thres and min(lengthDic[contigName]- contigEnd,  lengthDic[readName] - readEnd) < thres:
+                    
+            if readStart < readEnd and matchLen> K and min(contigStart,readStart)  < thres and min(lengthDic[contigName]- contigEnd ,  lengthDic[readName] - readEnd) + 1  < thres:
                 conditionForMatch = True
             else:
                 conditionForMatch = False
@@ -985,7 +984,7 @@ def extractEdgeSet(folderName, mummerLink, option= "nopolish"):
                 if contigStart < thres:
                     dataSet.append((readName, contigName, 'L',matchLen))
                 
-                if lengthDic[contigName]- contigEnd < thres :
+                if lengthDic[contigName]- contigEnd +1 < thres :
                     dataSet.append((readName, contigName, 'R',matchLen))
             
             tmp = f.readline()
@@ -1000,6 +999,8 @@ def extractEdgeSet(folderName, mummerLink, option= "nopolish"):
     
     dataSet.sort()
     matchPair = formMatchPairFromReadInfo(dataSet)
+    
+
     
     #print matchPair
     keyFound = []
@@ -1085,7 +1086,7 @@ def extractEdgeSet(folderName, mummerLink, option= "nopolish"):
     
     ### repeat aware logging
     myExtraLinkList = loggingReadsToRepeat(blockedSet+dataSet, contigList)
-    print "myExtraLinkList", myExtraLinkList
+    #print "myExtraLinkList", myExtraLinkList
     ### end repeat aware logging
     
     
@@ -1350,7 +1351,7 @@ def obtainLinkInfo(folderName, mummerLink,inputFile, mummerFile):
     fSmaller.close()
     fmyFile.close()
     
-    if False:
+    if True:
         useMummerAlign(mummerLink, folderName, mummerFile, inputFile+"_contigs_Double.fasta", inputFile+"_contigs_Double.fasta")
         
         
@@ -1370,7 +1371,7 @@ def obtainLinkInfo(folderName, mummerLink,inputFile, mummerFile):
         detailRead = readName.split('_')
         
 
-        if detailHelper[0]!= detailRead[0] and  helperName != readName and max(matchLen1, matchLen2) > minLen and readStart < readEnd  and min(helperStart,readStart) < thres and min(lengthDic[helperName]- helperEnd,  lengthDic[readName] - readEnd) < thres:
+        if detailHelper[0]!= detailRead[0] and  helperName != readName and max(matchLen1, matchLen2) > minLen and readStart < readEnd  and min(helperStart,readStart) < thres and min(lengthDic[helperName]- helperEnd,  lengthDic[readName] - readEnd) + 1 < thres:
             conditionForMatch = True
         else:
             conditionForMatch = False
@@ -1389,8 +1390,8 @@ def obtainLinkInfo(folderName, mummerLink,inputFile, mummerFile):
 
 def loggingReadsToRepeat(blockedSet, contigList):
     
-    for eachitem in blockedSet:
-        print eachitem
+    #for eachitem in blockedSet:
+    #    print eachitem
     
     matchPair = formMatchPairFromReadInfo(blockedSet)
     matchPair.sort()
@@ -1513,7 +1514,7 @@ def removeEmbedded(folderName , mummerLink):
 
     os.system("cp "+folderName+"contigs2.fasta "+folderName+"contigs.fasta") 
 
-    if False:
+    if True:
         useMummerAlign(mummerLink, folderName, "self", "contigs.fasta", "contigs.fasta")
     
     dataList = extractMumData(folderName, "selfOut")
@@ -1728,9 +1729,9 @@ def xPhased(folderName , mummerLink ):
         G.insertEdge(eachedge[0],eachedge[1], 0)
     
     
-    G.reportEdge()
+    #G.reportEdge()
     G.MBResolve()
-    G.reportEdge()
+    #G.reportEdge()
         
     G.saveToFile(folderName, "condensedGraphMB.txt")
     graphFileName = "condensedGraphMB.txt"
@@ -1886,7 +1887,7 @@ def compareWithReference(folderName , mummerLink):
      
 
 ###################################################### Starting point
-def mainFlow(folderName , mummerLink ):
+def mainFlow(folderName , mummerLink ):      
     print "Go Bears! ! !" 
     removeEmbedded(folderName , mummerLink)
     fetchSuccessor(folderName , mummerLink )
@@ -1897,7 +1898,7 @@ def mainFlow(folderName , mummerLink ):
     #ECReduction(folderName , mummerLink )
     
     
-    #compareWithReference(folderName , mummerLink)
+    compareWithReference(folderName , mummerLink)
     print "<3 Do cool things that matter <3"
     
 folderName = "S_cerivisea/"
