@@ -1,6 +1,8 @@
 import os
 from itertools import groupby
 from operator import itemgetter
+import sys
+import time
 
 ###################################################### Helper Functions 
 def extractMumData(folderName, fileName):
@@ -163,13 +165,11 @@ def transformCoor(dataList):
 
 
 def useMummerAlign(mummerLink, folderName, outputName, referenceName, queryName):
-    command =mummerLink +"nucmer --maxmatch --nosimplify -p "+folderName + outputName + " " + folderName+ referenceName +" "+ folderName+ queryName
+    command =mummerLink +"nucmer --maxmatch -p "+folderName + outputName + " " + folderName+ referenceName +" "+ folderName+ queryName
     os.system(command)
     
     command  = mummerLink +"show-coords -r "+folderName+outputName+".delta > "+folderName+outputName+"Out"
     os.system(command)
-
-
 
 
 def writeToFile_Double1(folderName, fileName1, fileName2, option = "contig"):
@@ -222,7 +222,10 @@ def reverseComplement(myStr):
             
         elif  myNewStr[i] == 'G' or myNewStr[i] == 'g':
             myNewStr2 += 'C'
-
+        elif myNewStr[i] == 'N' or myNewStr[i] == 'n':
+            myNewStr2 += 'N'
+        else:
+            print myNewStr[i]
             
     return myNewStr2
 
@@ -625,38 +628,43 @@ class seqGraph(object):
             for eachnode in self.graphNodesList:
                 if len(eachnode.nodeIndexList) > 0 :
                     if len(eachnode.listOfNextNodes) == 1 :
-                        oneSucList.append([eachnode.nodeIndex, eachnode.listOfNextNodes[0][0],eachnode.listOfNextNodes[0][1] ])
+                        oneSucList.append([eachnode.nodeIndex, eachnode.listOfNextNodes[0][0],eachnode.listOfNextNodes[0][1] ,1 ])
                     if len(eachnode.listOfPrevNodes) == 1: 
-                        onePreList.append([eachnode.listOfPrevNodes[0][0], eachnode.nodeIndex,eachnode.listOfPrevNodes[0][1] ])
+                        onePreList.append([eachnode.listOfPrevNodes[0][0], eachnode.nodeIndex,eachnode.listOfPrevNodes[0][1], 0 ])
             
              
             print "oneSucList", oneSucList 
             print "onePreList", onePreList
             
-            oneSucList.sort(key=itemgetter(2), reverse = True)
-            onePreList.sort(key = itemgetter(2), reverse = True)
             
-            for eachitem in oneSucList:
-                i, j, wt  = eachitem[0], eachitem[1] , eachitem[2]
-                if nameInEdgeList(i ,self.graphNodesList[j].listOfPrevNodes):
-                    removeList = []
-                    for eachprev in self.graphNodesList[j].listOfPrevNodes:
-                        if eachprev[0] != i :
-                            removeList.append(eachprev[0])
-                    
-                    for eachToRemove in removeList:
-                        self.removeEdge(eachToRemove, j)
+            ### Do them together when sort ? 
+            combinedList = oneSucList + onePreList 
+            combinedList.sort(key = itemgetter(2), reverse = True)
+           
+            
+            for eachitem in combinedList:
+                i, j, wt, myType  = eachitem[0], eachitem[1] , eachitem[2], eachitem[3]
+                
+                if myType == 1:
+                    if nameInEdgeList(i ,self.graphNodesList[j].listOfPrevNodes):
+                        removeList = []
+                        for eachprev in self.graphNodesList[j].listOfPrevNodes:
+                            if eachprev[0] != i :
+                                removeList.append(eachprev[0])
+                        
+                        for eachToRemove in removeList:
+                            self.removeEdge(eachToRemove, j)
     
-            for eachitem in onePreList:
-                i, j, wt  = eachitem[0], eachitem[1] , eachitem[2]
-                if nameInEdgeList(j ,self.graphNodesList[i].listOfNextNodes):
-                    removeList = []
-                    for eachnext in self.graphNodesList[i].listOfNextNodes:
-                        if eachnext[0] != j :
-                            removeList.append(eachnext[0])
+                elif myType == 0:
                     
-                    for eachToRemove in removeList:
-                        self.removeEdge(i, eachToRemove)
+                    if nameInEdgeList(j ,self.graphNodesList[i].listOfNextNodes):
+                        removeList = []
+                        for eachnext in self.graphNodesList[i].listOfNextNodes:
+                            if eachnext[0] != j :
+                                removeList.append(eachnext[0])
+                        
+                        for eachToRemove in removeList:
+                            self.removeEdge(i, eachToRemove)
     
                 
             self.condense()
@@ -766,7 +774,7 @@ def formRelatedReadsFile(folderName,mummerLink):
     nameList = []
     
     numberOfFiles = 20
-    if True:
+    if False:
         command = "./fasta-splitter.pl --n-parts "+str(numberOfFiles)+" "+ folderName+"raw_reads.fasta"
         os.system(command)
     
@@ -777,7 +785,7 @@ def formRelatedReadsFile(folderName,mummerLink):
         else:
             indexOfMum = str(dummyI)
         
-        if True:
+        if False:
             command =mummerLink +"nucmer --maxmatch --nosimplify -p "+folderName+"out "+ folderName+ "improvedTrunc.fasta raw_reads.part-"+indexOfMum+".fasta"
             os.system(command)
     
@@ -863,7 +871,7 @@ def formRelatedReadsFile(folderName,mummerLink):
     writeToFile_Double1(folderName, "relatedReads.fasta", "relatedReads_Double.fasta","read")
     
     numberOfFiles = 20
-    if True:
+    if False:
         command = "./fasta-splitter.pl --n-parts "+str(numberOfFiles)+" "+ folderName+"relatedReads_Double.fasta"
         os.system(command)
     
@@ -949,7 +957,7 @@ def extractEdgeSet(folderName, mummerLink, option= "nopolish"):
         else:
             indexOfMum = str(dummyI)
 
-        if True:
+        if False:
             command =mummerLink +"nucmer --maxmatch --simplify -p "+folderName+"outRefine "+ folderName+ "smaller_improvedContig.fasta "+ "relatedReads_Double.part-"+indexOfMum+".fasta"
             os.system(command)
             
@@ -1351,7 +1359,7 @@ def obtainLinkInfo(folderName, mummerLink,inputFile, mummerFile):
     fSmaller.close()
     fmyFile.close()
     
-    if True:
+    if False:
         useMummerAlign(mummerLink, folderName, mummerFile, inputFile+"_contigs_Double.fasta", inputFile+"_contigs_Double.fasta")
         
         
@@ -1514,7 +1522,7 @@ def removeEmbedded(folderName , mummerLink):
 
     os.system("cp "+folderName+"contigs2.fasta "+folderName+"contigs.fasta") 
 
-    if True:
+    if False:
         useMummerAlign(mummerLink, folderName, "self", "contigs.fasta", "contigs.fasta")
     
     dataList = extractMumData(folderName, "selfOut")
@@ -1701,6 +1709,7 @@ def xPhased(folderName , mummerLink ):
     numberOfContig, dataSet = obtainLinkInfo(folderName, mummerLink,"improved2", "mb")
     
     G = seqGraph(numberOfContig)
+    extraEdges = loadEdgeFromBlockedReads(folderName)
     for eachitem in dataSet:
         #print eachitem
         wt, myin, myout = eachitem
@@ -1720,18 +1729,13 @@ def xPhased(folderName , mummerLink ):
         i =int(myInData[0])*2 + offsetin
         j = int(myOutData[0])*2 + offsetout
         
-        G.insertEdge(i, j, wt)
-    
-    extraEdges = []
-    #extraEdges = loadEdgeFromBlockedReads(folderName)
-        
-    for eachedge in extraEdges:
-        G.insertEdge(eachedge[0],eachedge[1], 0)
+        if [i,j] in extraEdges:
+            G.insertEdge(i, j, wt)
     
     
     #G.reportEdge()
     G.MBResolve()
-    #G.reportEdge()
+    G.reportEdge()
         
     G.saveToFile(folderName, "condensedGraphMB.txt")
     graphFileName = "condensedGraphMB.txt"
@@ -1845,6 +1849,7 @@ def readContigOut(folderName, mummerLink, graphFileName,contigFile, outContigFil
     fImproved.close()
     
     print "All contigs used? ", all(contigUsed)
+    print "NContig", len(seqToPrint)
 
     f = open( folderName + outOpenList, 'w')
     f.write(str(len(seqToPrint))+'\n')
@@ -1889,19 +1894,28 @@ def compareWithReference(folderName , mummerLink):
 ###################################################### Starting point
 def mainFlow(folderName , mummerLink ):      
     print "Go Bears! ! !" 
-    removeEmbedded(folderName , mummerLink)
-    fetchSuccessor(folderName , mummerLink )
-    formSeqGraph(folderName , mummerLink )
-    fillGap(folderName , mummerLink)
+    
+    #removeEmbedded(folderName , mummerLink)
+    #fetchSuccessor(folderName , mummerLink )
+    #formSeqGraph(folderName , mummerLink )
+    #fillGap(folderName , mummerLink)
     
     xPhased(folderName , mummerLink )
     #ECReduction(folderName , mummerLink )
+    #compareWithReference(folderName , mummerLink)
     
-    
-    compareWithReference(folderName , mummerLink)
     print "<3 Do cool things that matter <3"
     
-folderName = "S_cerivisea/"
-mummerLink = "MUMmer3.23/"
+#folderName = "S_cerivisea/"
+#mummerLink = "MUMmer3.23/"
+    
+t0 = time.time()
+print 'Number of arguments:', len(sys.argv), 'arguments.'
+print 'Argument List:', str(sys.argv)
+
+folderName = sys.argv[1]
+mummerLink = sys.argv[2]
+
 
 mainFlow(folderName,mummerLink)
+print  "Time",  time.time() - t0
