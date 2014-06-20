@@ -628,9 +628,14 @@ class seqGraph(object):
             for eachnode in self.graphNodesList:
                 if len(eachnode.nodeIndexList) > 0 :
                     if len(eachnode.listOfNextNodes) == 1 :
-                        oneSucList.append([eachnode.nodeIndex, eachnode.listOfNextNodes[0][0],eachnode.listOfNextNodes[0][1] ,1 ])
+                        nextNodeIndex = eachnode.listOfNextNodes[0][0]
+                        if len(self.graphNodesList[nextNodeIndex].listOfPrevNodes) <=2:
+                            oneSucList.append([eachnode.nodeIndex, eachnode.listOfNextNodes[0][0],eachnode.listOfNextNodes[0][1] ,1 ])
                     if len(eachnode.listOfPrevNodes) == 1: 
-                        onePreList.append([eachnode.listOfPrevNodes[0][0], eachnode.nodeIndex,eachnode.listOfPrevNodes[0][1], 0 ])
+                        prevNodeIndex = eachnode.listOfPrevNodes[0][0]
+                        if len(self.graphNodesList[prevNodeIndex].listOfNextNodes) <=2:
+                            onePreList.append([eachnode.listOfPrevNodes[0][0], eachnode.nodeIndex,eachnode.listOfPrevNodes[0][1], 0 ])
+                            
             
              
             print "oneSucList", oneSucList 
@@ -774,7 +779,7 @@ def formRelatedReadsFile(folderName,mummerLink):
     nameList = []
     
     numberOfFiles = 20
-    if False:
+    if True:
         command = "./fasta-splitter.pl --n-parts "+str(numberOfFiles)+" "+ folderName+"raw_reads.fasta"
         os.system(command)
     
@@ -785,7 +790,7 @@ def formRelatedReadsFile(folderName,mummerLink):
         else:
             indexOfMum = str(dummyI)
         
-        if False:
+        if True:
             command =mummerLink +"nucmer --maxmatch --nosimplify -p "+folderName+"out "+ folderName+ "improvedTrunc.fasta raw_reads.part-"+indexOfMum+".fasta"
             os.system(command)
     
@@ -871,7 +876,7 @@ def formRelatedReadsFile(folderName,mummerLink):
     writeToFile_Double1(folderName, "relatedReads.fasta", "relatedReads_Double.fasta","read")
     
     numberOfFiles = 20
-    if False:
+    if True:
         command = "./fasta-splitter.pl --n-parts "+str(numberOfFiles)+" "+ folderName+"relatedReads_Double.fasta"
         os.system(command)
     
@@ -957,7 +962,7 @@ def extractEdgeSet(folderName, mummerLink, option= "nopolish"):
         else:
             indexOfMum = str(dummyI)
 
-        if False:
+        if True:
             command =mummerLink +"nucmer --maxmatch --simplify -p "+folderName+"outRefine "+ folderName+ "smaller_improvedContig.fasta "+ "relatedReads_Double.part-"+indexOfMum+".fasta"
             os.system(command)
             
@@ -1359,7 +1364,7 @@ def obtainLinkInfo(folderName, mummerLink,inputFile, mummerFile):
     fSmaller.close()
     fmyFile.close()
     
-    if False:
+    if True:
         useMummerAlign(mummerLink, folderName, mummerFile, inputFile+"_contigs_Double.fasta", inputFile+"_contigs_Double.fasta")
         
         
@@ -1419,10 +1424,11 @@ def loggingReadsToRepeat(blockedSet, contigList):
     for eachitem in matchPair: 
         mystart = eachitem[0]
         myend = eachitem[1]
+        len1, len2 = eachitem[3], eachitem[4]
         
         
         if myend in startList and mystart in endList :
-            returnList.append([mystart, myend])
+            returnList.append([mystart, myend, len1, len2])
             #print eachitem
     
     returnList.sort()
@@ -1437,8 +1443,20 @@ def blockExtraStored(storedStrand,myExtraLinkList,folderName ):
     for key, items in groupby(myExtraLinkList, itemgetter(0,1)):
         mystart = key[0]
         myend = key[1]
-        f.write(str(storedStrand[mystart][0])+'_'+storedStrand[mystart][1]+';'+ str(storedStrand[myend][0])+'_'+storedStrand[myend][1]+'\n')
-
+        maxLen = -1
+        storedLenPair = [-1, -1]
+        count = 0
+        for eachsub in items:
+            print "\t", eachsub
+            count += 1
+            len1, len2 =eachsub[2], eachsub[3]
+            if min(len1, len2) > maxLen:
+                maxLen = min(len1, len2)
+                storedLenPair = [len1, len2]
+        print "Copy count", count, maxLen, storedLenPair
+        #if count > 1:
+        f.write(str(storedStrand[mystart][0])+'_'+storedStrand[mystart][1]+';'+ str(storedStrand[myend][0])+'_'+storedStrand[myend][1]+';'+str(storedLenPair[0])+';'+str(storedLenPair[1])+'\n')
+            
     f.close()
     #print storedStrand 
     #print myExtraLinkList
@@ -1452,6 +1470,8 @@ def loadEdgeFromBlockedReads(folderName):
         myInfo = tmp.split(';')
         inNode = myInfo[0].split('_')
         outNode = myInfo[1].split('_')
+        inWt = int(myInfo[2])
+        outWt = int(myInfo[3])
         
         myInIndex , myOutIndex  = 1997, 1997 
         if inNode[1] == 'p':
@@ -1464,7 +1484,7 @@ def loadEdgeFromBlockedReads(folderName):
         else:
             myOutIndex = 2*int(outNode[0]) +1 
         
-        extraEdges.append([myInIndex, myOutIndex])
+        extraEdges.append([myInIndex, myOutIndex, inWt, outWt])
         tmp = f.readline().rstrip()
     
     f.close()
@@ -1479,7 +1499,7 @@ def formMatchPairFromReadInfo(dataSet):
     
     matchPair = []
     for key, items in groupby(dataSet, itemgetter(0)):
-        #print "key", key
+        print "key", key
         left = []
         right = []
         
@@ -1522,7 +1542,7 @@ def removeEmbedded(folderName , mummerLink):
 
     os.system("cp "+folderName+"contigs2.fasta "+folderName+"contigs.fasta") 
 
-    if False:
+    if True:
         useMummerAlign(mummerLink, folderName, "self", "contigs.fasta", "contigs.fasta")
     
     dataList = extractMumData(folderName, "selfOut")
@@ -1708,8 +1728,13 @@ def xPhased(folderName , mummerLink ):
     
     numberOfContig, dataSet = obtainLinkInfo(folderName, mummerLink,"improved2", "mb")
     
+    lenDic = obtainLength(folderName, "improved2_Double.fasta")
+    
+    confidenLenThres = 0 
+    
     G = seqGraph(numberOfContig)
     extraEdges = loadEdgeFromBlockedReads(folderName)
+    
     for eachitem in dataSet:
         #print eachitem
         wt, myin, myout = eachitem
@@ -1729,7 +1754,14 @@ def xPhased(folderName , mummerLink ):
         i =int(myInData[0])*2 + offsetin
         j = int(myOutData[0])*2 + offsetout
         
-        if [i,j] in extraEdges:
+        ck = False
+        
+        for eachedge in extraEdges:
+            mystart, myend, len1, len2 = eachedge[0], eachedge[1],  eachedge[2] , eachedge[3]
+            if [i,j] == [mystart, myend] and min(len1,len2) >=wt and lenDic[myin] >= confidenLenThres and lenDic[myout] >= confidenLenThres:
+                ck = True
+                
+        if ck:
             G.insertEdge(i, j, wt)
     
     
@@ -1895,14 +1927,14 @@ def compareWithReference(folderName , mummerLink):
 def mainFlow(folderName , mummerLink ):      
     print "Go Bears! ! !" 
     
-    #removeEmbedded(folderName , mummerLink)
-    #fetchSuccessor(folderName , mummerLink )
-    #formSeqGraph(folderName , mummerLink )
-    #fillGap(folderName , mummerLink)
+    removeEmbedded(folderName , mummerLink)
+    fetchSuccessor(folderName , mummerLink )
+    formSeqGraph(folderName , mummerLink )
+    fillGap(folderName , mummerLink)
     
     xPhased(folderName , mummerLink )
     #ECReduction(folderName , mummerLink )
-    #compareWithReference(folderName , mummerLink)
+    compareWithReference(folderName , mummerLink)
     
     print "<3 Do cool things that matter <3"
     
