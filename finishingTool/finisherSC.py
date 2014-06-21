@@ -1934,7 +1934,7 @@ def mainFlow(folderName , mummerLink ):
     
     xPhased(folderName , mummerLink )
     #ECReduction(folderName , mummerLink )
-    compareWithReference(folderName , mummerLink)
+    #compareWithReference(folderName , mummerLink)
     
     print "<3 Do cool things that matter <3"
     
