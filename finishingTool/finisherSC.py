@@ -1942,7 +1942,7 @@ def mainFlow(folderName , mummerLink ):
     #compareWithReference(folderName , mummerLink)
     
     print "<3 Do cool things that matter <3"
-    
+     
 #folderName = "S_cerivisea/"
 #mummerLink = "MUMmer3.23/"
     
